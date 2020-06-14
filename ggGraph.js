@@ -81,7 +81,7 @@ class Graph {
         let lw = min < max ? min : max;
         let hg = max > min ? max : min;
         let rn = hg - lw;
-        rn = rn > 0 ? rn : 0.00000000000000000001;
+        rn = rn > 0 ? rn : 0.001;
         
         let divs = Math.pow(10, Math.floor(Math.log10(rn)));
         let rndDown = (Math.floor(lw /divs) * divs);
@@ -384,6 +384,7 @@ class Graph {
                 
                 // Paint the series.
                 ctx.fillStyle = this.graphOptions.main.backgroundColor;
+                ctx.clearRect(0, 0, cw, ch);
                 ctx.fillRect(0, 0, cw, ch);
                 
                 let xmarks  = objectExists(axisInfo.xBounds)  ? axisInfo.xBounds.marks  : undefined;
@@ -396,6 +397,16 @@ class Graph {
                 
                 for (let ii = 0; ii < this.series.length; ii++) {
                     this.series[ii].draw2D(ctx, axisInfo, canvas_layout.graph);
+                }
+                
+                // Now clear behind the axis.
+                ctx.fillStyle = this.graphOptions.main.backgroundColor;
+                let axiss = [canvas_layout.xAxis, canvas_layout.yAxis, canvas_layout.xAxis];
+                for (let ii = 0; ii < 3; ii++) {
+                    if (objectExists(axiss[ii])) {
+                        ctx.clearRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
+                        ctx.fillRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
+                    }
                 }
                 
                 // Paint the axis.
@@ -609,7 +620,7 @@ class Graph {
                 if (eventObj.buttons === 1) {
                     ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                     ctx.fillStyle = '#80808080';
-                    ctx.fillRect(this.lastXY.x, this.lastXY.y, eventObj.clientX - this.lastXY.x, eventObj.clientY - this.lastXY.y);
+                    ctx.fillRect(this.lastXY.x, this.lastXY.y, eventObj.offsetX - this.lastXY.x, eventObj.offsetY - this.lastXY.y);
                 }
                 // this.lastBounds = {'x': dataBoundsX, 'y': dataBoundsY, 'y2': null, 'z': null, 'w': cw, 'h': ch};
                 
@@ -618,7 +629,7 @@ class Graph {
             case 5: // down.
                 ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                 if (eventObj.buttons === 1) {
-                    this.lastXY = {x: eventObj.clientX, y: eventObj.clientY};
+                    this.lastXY = {x: eventObj.offsetX, y: eventObj.offsetY};
                 }
                 break;
             case 6: // up.
@@ -637,14 +648,17 @@ class Graph {
                 let hx = this.lastXY.x;
                 let ly = eventObj.y;
                 let hy = this.lastXY.y;
-                if (this.lastXY.x < eventObj.x) {
+                if (this.lastXY.x < eventObj.offsetX) {
                     lx = this.lastXY.x;
                     hx = eventObj.x;
                 } 
-                if (this.lastXY.y < eventObj.y) {
+                if (this.lastXY.y < eventObj.offsetY) {
                     ly = this.lastXY.y;
                     hy = eventObj.y;
                 } 
+                if ((lx == hx) || (ly == hy)) {
+                    return;
+                }
                 let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
                 let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
                 lx = ((lx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;

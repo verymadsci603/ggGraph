@@ -124,11 +124,11 @@ class LineSeries {
             ctx.strokeStyle = this.seriesOptions.defaultLineColor;
             ctx.beginPath();
             for (let ii = 0; ii < cacheLen; ii++) {
-                if (x.mins[ii] >= dataBounds.xBounds.min && x.maxs[ii] <= dataBounds.xBounds.max && 
-                    y.mins[ii] >= dataBounds.yBounds.min && y.maxs[ii] <= dataBounds.yBounds.max) {					
-
-                    lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min || 
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {					
+                    continue;
                 }
+                lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);                
             }
             ctx.stroke();
         }
