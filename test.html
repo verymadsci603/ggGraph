@@ -1,0 +1,27 @@
+<html>
+<header>
+<script src="jquery-3.5.1.min.js"/></script>
+<script src="ggGraph_Utilities.js"></script>
+<script src="ggGraph_Options.js"></script>
+<script src="ggGraph_DataSeries.js"></script>
+<script src="ggGraph_DataHive.js"></script>
+<script src="ggGraph_LineSeries.js"></script>
+<script src="ggGraph.js"></script>
+<script> 
+	window.addEventListener('DOMContentLoaded', (event) => {
+	
+		ggGraph.initialize();
+		ggGraph.setupTestData();
+		ggGraph.setupTestLineGraph('testLineGraph');
+		let t0 = performance.now();
+		ggGraph.getGraph('testLineGraph').draw();
+		console.log("Delta = " + (performance.now() - t0) + "msec");
+	});
+</script>
+</header>
+<body>
+
+<div id='testLineGraph' class='ggGraph_line'></div>
+
+</body>
+</html>
