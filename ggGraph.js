@@ -64,7 +64,63 @@ class Graph {
         this.lastLayout = {};
         this.lastXY = {x:0, y: 0};
         this.zoom = [];
+        let $topEl = $(this.guid);        
+        this.graphElements = {
+            $top: $topEl,
+            $canvas: $topEl.find('.ggGraph_canvas'),
+            $overlay: $topEl.find('.ggGraph_overlay'),
+            $elements: $topEl.find('.ggGraph_elements'),
+            $zoomReset: $topEl.find('.ggGraph_zoomReset'),
+            $zoomOut: $topEl.find('.ggGraph_zoomOut')    
+        };            
         ggGraph_Graphs[id_or_guid] = this;
+    }
+    
+    _roundGraphValue(val, divs) {
+        // How rounding works:
+        // say val = 0.150000001, and divs = 0.1 That means the whole span range is >0 and < 1
+        // Round to nearest 1/100th of divs.
+        // val              divs      result
+        // 0.15000001       0.1       Math.round(val*10000)/10000
+        // 0.15000001       1         Math.round(val*1000)/1000
+        // 0.15000001       10        Math.round(val*100)/100
+        // 0.15000001       100       Math.round(val*10)/10
+        // 0.15000001       1000      Math.round(val)
+        // 0.15000001       10000     Math.round(val/10)*10
+        // 0.15000001       100000    Math.round(val/100)*100
+        // 0.15000001       1000000   Math.round(val/1000)*1000
+        if (divs < 1000) {
+            let s = 1000/divs;
+            val = Math.round(val * s) / s;
+        }
+        if (divs > 1000) {
+            let s = divs / 1000;
+            val = Math.round(val / s) * s;
+        }
+        
+        // To string.
+        let valStr = '' + val;
+        let period = valStr.indexOf('.');
+        if (period < 0) {
+            let clipPos = valStr.length;
+            for (let ii = clipPos - 1; ii > period; ii--){
+                if (valStr[ii] === '0') {
+                    clipPos--;
+                } else {
+                    break;
+                }
+            }
+            if (clipPos < valStr.length) {                
+                if (valStr.length - clipPos > 6) {
+                    valStr = ''  + (val/1000000) + ' m';
+                } else { 
+                    if (valStr.length - clipPos > 3) {
+                        valStr = ''  + (val/1000) + ' k';
+                    }
+                }
+            }
+        }
+        return valStr;        
     }
 
     _computeAxisMarkers(ctx, isHorizontal, min, max, w, h, margin, opt) {
@@ -91,6 +147,9 @@ class Graph {
         let remaining = isHorizontal ? w - margin : h - margin;
         let best = [{p: isHorizontal ? 0: 1, t: lw}, {p: 1, t: hg}];
         
+
+        
+        
         let scales = [0.25, 0.5, 1, 2, 4, 5];
         for (let s_ii = 1; s_ii < 7; s_ii++){
             let tmp = rndDown;
@@ -100,9 +159,8 @@ class Graph {
             if (isHorizontal) {
                 while ((tmp <= hg) && rem > 0) {
                     if ((tmp <= hg) && (tmp >= lw)) {
-                        let val = tmp;
-                        let pos = (val - lw) / rn;
-                        let v_str = '' + val;
+                        let pos = (tmp - lw) / rn;
+                        let v_str = this._roundGraphValue(tmp, divs);
                         proposed.push({ p: pos, t: v_str});
                         rem -= margin + ctx.measureText(v_str).width;
                     }
@@ -112,9 +170,8 @@ class Graph {
                 let rm_down = margin + opt.textSizePx;
                 while ((tmp <= hg) && rem > 0) {
                     if ((tmp <= hg) && (tmp >= lw)) {
-                        let val = tmp;
-                        let pos = (val - lw) / rn;
-                        let v_str = '' + val;
+                        let pos = (tmp - lw) / rn;
+                        let v_str = this._roundGraphValue(tmp, divs);
                         proposed.push({ p: 1 - pos, t: v_str});
                         rem -= rm_down;
                     }
@@ -327,46 +384,50 @@ class Graph {
      * @brief   Resize event handler.
      */
     handleResize() {
-        // ggGraph_canvas
-        let $el = $('#' + this.guid);
-        let canvas = $el.find('.ggGraph_canvas')[0]; 
-        let canvasOverlay = $el.find('.ggGraph_overlay')[0];
+        this._drawCanvas(this.lastBounds.x, this.lastBounds.y, true);
+    }
+    
+    /**
+     * @brief   Draw the graph.
+     *
+     * @param   dataBoundsX     Data x bounds.
+     * @param   dataBoundsY     Data y bounds.
+     */
+    draw(dataBoundsX, dataBoundsY) {       
+        this._drawCanvas(dataBoundsX, dataBoundsY, false);
+    }
+    
+    /**
+     * @brief   Draw the graph.
+     *
+     * @param   dataBoundsX     Data x bounds.
+     * @param   dataBoundsY     Data y bounds.
+     * @param   resizingFlag    Is this due to a resize?
+     */
+    _drawCanvas(dataBoundsX, dataBoundsY, resizingFlag) {
+        if (this.graphElements.$top.length === 0) {
+            // Didn't quite exist at graph construction, normal expected, fill it in now.
+            let $topEl = $('#' + this.guid);
+            this.graphElements = {
+                $top: $topEl,
+                $canvas: $topEl.find('.ggGraph_canvas'),
+                $overlay: $topEl.find('.ggGraph_overlay'),
+                $elements: $topEl.find('.ggGraph_elements'),
+                $zoomReset: $topEl.find('.ggGraph_zoomReset'),
+                $zoomOut: $topEl.find('.ggGraph_zoomOut')            
+            };
+        }
+                         
+        let canvas = this.graphElements.$canvas[0]; 
+        let overlay = this.graphElements.$overlay[0];
         let cw = canvas.clientWidth;
         let ch = canvas.clientHeight;
-        if ((this.lastBounds.w !== cw) || (this.lastBounds.h !== ch)) {            
-            this._drawCanvas(canvas, canvasOverlay, cw, ch, this.lastBounds.x, this.lastBounds.y);
-        }
-    }
-    
-    /**
-     * @brief   Draw the graph.
-     *
-     * @param   dataBoundsX     Data x bounds.
-     * @param   dataBoundsY     Data y bounds.
-     */
-    draw(dataBoundsX, dataBoundsY) {
-        let $el = $('#' + this.guid);
-        let canvas = $el.find('.ggGraph_canvas')[0];
-        let canvasOverlay = $el.find('.ggGraph_overlay')[0];
-        let cw = canvas.clientWidth;
-        let ch = canvas.clientHeight;        
-        this._drawCanvas(canvas, canvasOverlay, cw, ch, dataBoundsX, dataBoundsY);
-    }
-    
-    /**
-     * @brief   Draw the graph.
-     *
-     * @param   canvas          The canvas.
-     * @param   overlay         The overlay canvas.
-     * @param   cw              Canvas width.
-     * @param   ch              Canvas height.
-     * @param   dataBoundsX     Data x bounds.
-     * @param   dataBoundsY     Data y bounds.
-     */
-    _drawCanvas(canvas, overlay, cw, ch, dataBoundsX, dataBoundsY) {
         if (cw === undefined || ch === undefined) {
             return;
         }
+        if (resizingFlag && (this.lastBounds.w === cw) && (this.lastBounds.h === ch)) { 
+            return;
+        } 
         canvas.width = cw;
         canvas.height = ch;
         overlay.width = cw;
@@ -378,6 +439,8 @@ class Graph {
         let axisInfo = this._computeAxis(ctx, canvas_layout, dataBoundsX, dataBoundsY);
         this.lastBounds.x = { min: axisInfo.xBounds.min, max: axisInfo.xBounds.max};
         this.lastBounds.y = { min: axisInfo.yBounds.min, max: axisInfo.yBounds.max};
+        this.graphElements.$zoomOut.css('top', canvas_layout.graph.y);
+        this.graphElements.$zoomReset.css('top', canvas_layout.graph.y);
         
         if (this.graphOptions) {
             if (this.graphOptions.main.graphType === '2D') {
@@ -604,7 +667,9 @@ class Graph {
     canvasEvent(eventId, eventObj, $canvasParent) {
         let overlayCanvas = $canvasParent.children('.ggGraph_overlay')[0]
         let ctx = overlayCanvas.getContext("2d");
-        
+        if (eventObj.target.nodeName === 'BUTTON'){
+            return;
+        }
         switch(eventId){
             case 0: // click.
             case 1: // dblclick.
@@ -622,9 +687,6 @@ class Graph {
                     ctx.fillStyle = '#80808080';
                     ctx.fillRect(this.lastXY.x, this.lastXY.y, eventObj.offsetX - this.lastXY.x, eventObj.offsetY - this.lastXY.y);
                 }
-                // this.lastBounds = {'x': dataBoundsX, 'y': dataBoundsY, 'y2': null, 'z': null, 'w': cw, 'h': ch};
-                
-        // this.lastLayout = canvas_layout;
                 break;
             case 5: // down.
                 ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -644,9 +706,9 @@ class Graph {
                     (!objectExists(this.lastBounds.y))) {
                     return;
                 }
-                let lx = eventObj.x;
+                let lx = eventObj.offsetX;
                 let hx = this.lastXY.x;
-                let ly = eventObj.y;
+                let ly = eventObj.offsetY;
                 let hy = this.lastXY.y;
                 if (this.lastXY.x < eventObj.offsetX) {
                     lx = this.lastXY.x;
@@ -656,19 +718,22 @@ class Graph {
                     ly = this.lastXY.y;
                     hy = eventObj.y;
                 } 
-                if ((lx == hx) || (ly == hy)) {
+                if ((hx - lx < 4) || (hy - ly < 4)) {
                     return;
                 }
-                let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
-                let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
-                lx = ((lx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
-                hx = ((hx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
-                ly = ((ly - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
-                hy = ((hy - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
-                this.zoom.push( {x:{min: lx, max: hx}, y:{min: ly, max : hy}});
-                $canvasParent.find('.ggGraph_zoomOut').css('display', 'block');
-                $canvasParent.find('.ggGraph_zoomReset').css('display', 'block');                
-                this.draw({min: lx, max: hx}, {min: ly, max : hy});
+                if (eventObj.which === 1) { 
+                    // Release of left click.
+                    let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
+                    let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
+                    lx = ((lx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
+                    hx = ((hx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
+                    ly = ((ly - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
+                    hy = ((hy - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
+                    this.zoom.push( {x:{min: lx, max: hx}, y:{min: ly, max : hy}});
+                    $canvasParent.find('.ggGraph_zoomOut').css('display', 'block');
+                    $canvasParent.find('.ggGraph_zoomReset').css('display', 'block');                
+                    this.draw({min: lx, max: hx}, {min: ly, max : hy});
+                }
                 break;
                 
             default: // 
@@ -745,15 +810,14 @@ function _setup($graphs) {
         ' onmousedown="ggGraph.canvasEvent(5, this);"' +
         ' onmouseup="ggGraph.canvasEvent(6, this);"';
     const stackedStyle = 'style="position: absolute; top: 0; left: 0;float:none; width:100%; height:100%"';
+    const btnStyleStart = 'style="position:relative; display:none; width:30px; height: 30px; left:calc(100% - 30px);" ';
     const graph_elements = 
-        '<button class="ggGraph_zoomOut" ' + 
-        'style="float:right; display:none;" ' + 
+        '<button class="ggGraph_zoomOut" ' + btnStyleStart +        
         'onclick="ggGraph.getGraph(this.parentElement.parentElement.parentElement.id).zoomOut();" ' + 
-        '>out</button>' +
-        '<button class="ggGraph_zoomReset" ' + 
-        'style="float:right; display:none;" ' + 
+        'title="Zoomout">-</button>' +
+        '<button class="ggGraph_zoomReset" ' + btnStyleStart + 
         'onclick="ggGraph.getGraph(this.parentElement.parentElement.parentElement.id).zoomReset();" ' + 
-        '>reset</button>';
+        'title="Reset zoom">X</button>';
         
     for (let ii = 0; ii < $graphs.length; ii++) {
         let $g = $($graphs[ii]);
@@ -770,6 +834,7 @@ function _setup($graphs) {
             ggGraph_Graphs[$g[0].id] = new Graph($g[0].id);
         }
     }
+    
 }
 
 /**
