@@ -101,7 +101,29 @@ class LineSeries {
         }
     }
     
+    /**
+     * @brief   Find the "best" mouse over point.
+     *
+     * @param   x       Data converted "x" value.
+     * @param   y       Data converted "y" value.
+     * @param   sx      Scale screen to data, x axis.
+     * @param   sy      Scale screen to data, y axis.
+     * @param   best    {found: false, msg: '', range: undefined, x: -1, y: -1, shape: undefined, color: undefined};
+     *
+     * @return  Updated best (or existing best).
+     */
+    mouseOver2D(x, y, sx, sy, best) {
+
+        return best;
+    }
     
+    /**
+     * @brief   Render to the context.
+     *
+     * @param   ctx             Context 2D.
+     * @param   dataBounds      Restriction bounds.
+     * @param   layout          Where to paint.
+     */
     draw2D(ctx, dataBounds, layout) {
         
         let x = this.getData('x');

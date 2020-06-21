@@ -8,9 +8,9 @@
  */
 
 
-ggGraph_DataHive = new DataHive();
+/** Data hive. */
+let ggGraph_DataHive = new DataHive();
 
-    
 /** All graphs. */
 let ggGraph_Graphs = {};
 
@@ -57,15 +57,17 @@ class Graph {
                 axisLike, axisLike, undefined, axisLike);         
         }   
     
-        this.guid = id_or_guid;
-        this.series = [];
-        this.graphOptions = graphOptions;
+        this.guid = id_or_guid; // Unique HTML wide ID of this thing.
+        this.series = [];       // The series to graph.
+        this.graphOptions = graphOptions; // Options for the graph.
         this.lastBounds = {'x': null, 'y': null, 'y2': null, 'z': null, 'w': null, 'h': null};
-        this.maxBounds = undefined;
+        this.maxBounds = undefined; // Max bounds for scrolling.
         this.lastLayout = {};
         this.lastXY = {x:0, y: 0};
         this.zoom = [];
-        let $topEl = $(this.guid);        
+        let $topEl = $(this.guid); 
+
+        // Quick lookup caching of the things we check during drawing repeatedly.
         this.graphElements = {
             $top: $topEl,
             $canvas: $topEl.find('.ggGraph_canvas'),
@@ -74,58 +76,23 @@ class Graph {
             $zoomReset: $topEl.find('.ggGraph_stepReset'),
             $zoomOut: $topEl.find('.ggGraph_stepOut')    
         };            
+        
+        // Save off by ID.
         ggGraph_Graphs[id_or_guid] = this;
     }
     
-    _roundGraphValue(val, divs) {
-        // How rounding works:
-        // say val = 0.150000001, and divs = 0.1 That means the whole span range is >0 and < 1
-        // Round to nearest 1/100th of divs.
-        // val              divs      result
-        // 0.15000001       0.1       Math.round(val*10000)/10000
-        // 0.15000001       1         Math.round(val*1000)/1000
-        // 0.15000001       10        Math.round(val*100)/100
-        // 0.15000001       100       Math.round(val*10)/10
-        // 0.15000001       1000      Math.round(val)
-        // 0.15000001       10000     Math.round(val/10)*10
-        // 0.15000001       100000    Math.round(val/100)*100
-        // 0.15000001       1000000   Math.round(val/1000)*1000
-        if (divs < 1000) {
-            let s = 1000/divs;
-            val = Math.round(val * s) / s;
-        }
-        if (divs > 1000) {
-            let s = divs / 1000;
-            val = Math.round(val / s) * s;
-        }
-        
-        // To string.
-        let valStr = '' + val;
-        let period = valStr.indexOf('.');
-        if (period < 0) {
-            let clipPos = valStr.length;
-            for (let ii = clipPos - 1; ii > period; ii--){
-                if (valStr[ii] === '0') {
-                    clipPos--;
-                } else {
-                    break;
-                }
-            }
-            if (clipPos < valStr.length) {   
-                if (valStr.length - clipPos > 12) {
-                    valStr = ''  + (val/1000000000000) + ' T';
-                } else if (valStr.length - clipPos > 9) {
-                    valStr = ''  + (val/1000000000) + ' B';
-                } else if (valStr.length - clipPos > 6) {
-                    valStr = ''  + (val/1000000) + ' M';
-                } else if (valStr.length - clipPos > 3) {
-                    valStr = ''  + (val/1000) + ' k';                
-                }                
-            }
-        }
-        return valStr;        
-    }
-
+    /**
+     * @brief   Compute axis markers.
+     *
+     * @param   ctx             Context for string measurement.
+     * @param   isHorizontal    Is horizontal vs. vertical axis.
+     * @param   min             Minimum value.
+     * @param   max             Maximum value.
+     * @param   w               Width in pixels.
+     * @param   h               Height in pixels.
+     * @param   margin          Margin in pixels between things.
+     * @param   opt             Options.
+     */
     _computeAxisMarkers(ctx, isHorizontal, min, max, w, h, margin, opt) {
         // To measure things.
         ctx.font = "" + opt.textSizePx + "px Verdana";
@@ -150,9 +117,6 @@ class Graph {
         let remaining = isHorizontal ? w - margin : h - margin;
         let best = [{p: isHorizontal ? 0: 1, t: lw}, {p: 1, t: hg}];
         
-
-        
-        
         let scales = [0.25, 0.5, 1, 2, 4, 5];
         for (let s_ii = 1; s_ii < 7; s_ii++){
             let tmp = rndDown;
@@ -163,7 +127,7 @@ class Graph {
                 while ((tmp <= hg) && rem > 0) {
                     if ((tmp <= hg) && (tmp >= lw)) {
                         let pos = (tmp - lw) / rn;
-                        let v_str = this._roundGraphValue(tmp, divs);
+                        let v_str = roundToString(tmp, divs);
                         proposed.push({ p: pos, t: v_str});
                         rem -= margin + ctx.measureText(v_str).width;
                     }
@@ -174,7 +138,7 @@ class Graph {
                 while ((tmp <= hg) && rem > 0) {
                     if ((tmp <= hg) && (tmp >= lw)) {
                         let pos = (tmp - lw) / rn;
-                        let v_str = this._roundGraphValue(tmp, divs);
+                        let v_str = roundToString(tmp, divs);
                         proposed.push({ p: 1 - pos, t: v_str});
                         rem -= rm_down;
                     }
@@ -665,6 +629,69 @@ class Graph {
     }
 
     /**
+     * @brief   Using "this" and mouse offset x,y, do a pan operation.
+     *
+     * @param   offsetX     Event's offsetX mouse value.
+     * @param   offsetY     Event's offsetY mouse value.
+     */
+    _doPan(offsetX, offsetY) {
+        if ((this.lastXY.x === -1) || (this.lastXY.y === -1)) {
+            return;
+        }
+        if ((!objectExists(this.lastLayout))       ||
+            (!objectExists(this.lastLayout.graph)) ||
+            (!objectExists(this.lastBounds))       ||
+            (!objectExists(this.lastBounds.x))     ||
+            (!objectExists(this.lastBounds.y))) {
+            return;
+        }
+        let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
+        let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
+        let dlx = sx * (this.lastXY.x - offsetX);
+        let dly = sy * (this.lastXY.y - offsetY);
+        let lx = this.lastBounds.x.min + dlx;
+        let gx = this.lastBounds.x.max - this.lastBounds.x.min;
+        let ly = this.lastBounds.y.min + dly;
+        let gy = this.lastBounds.y.max - this.lastBounds.y.min;
+        this.lastXY.x = offsetX;
+        this.lastXY.y = offsetY;
+        if (objectExists(this.maxBounds)) {
+            lx = (lx + gx < this.maxBounds.x.max) ? lx : this.maxBounds.x.max - gx;
+            lx = (lx > this.maxBounds.x.min) ? lx : this.maxBounds.x.min;
+            ly = (ly + gy < this.maxBounds.y.max) ? ly : this.maxBounds.max - gy;
+            ly = (ly > this.maxBounds.y.min) ? ly : this.maxBounds.y.min;
+        }
+        this.graphElements.$zoomOut.css('display', 'block');
+        this.graphElements.$zoomReset.css('display', 'block');            
+        this.draw({min: lx, max: lx + gx}, {min: ly, max : ly + gy});
+    }
+
+    /**
+     * @brief   Using "this" and mouse offset x,y, do a pan operation.
+     *
+     * @param   offsetX     Event's offsetX mouse value.
+     * @param   offsetY     Event's offsetY mouse value.
+     */
+    _doMouseOver(offsetX, offsetY) {
+        // Look for hover over, sx,sy scales screen to data, px,py is data space x,y.
+        let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
+        let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
+        let px = (offsetX * sy) + this.lastBounds.x.min;
+        let py = (offsetY * sy) + this.lastBounds.y.min;
+        
+        if (this.graphOptions.main.graphType === '2D') {
+            let best = {found: false, msg: '', range: undefined, x: -1, y: -1, shape: undefined, color: undefined};
+            for (let ii = 0; ii < this.series.length; ii++) {
+                best = this.series[ii].mouseOver2D(px, py, sx, sy, best);
+            }
+           
+            if (best.found) {
+                // Show it.
+            }
+        }
+    }
+    
+    /**
      * @brief   Canvas event.
      * 
      * @param   eventId         What the event is.
@@ -672,7 +699,10 @@ class Graph {
      * @param   $canvasParent   Parent of canvases.
      */
     canvasEvent(eventId, eventObj, $canvasParent) {
-        let overlayCanvas = $canvasParent.children('.ggGraph_overlay')[0]
+        if (this.graphElements.$overlay.length === 0) {
+            return;
+        }
+        let overlayCanvas = this.graphElements.$overlay[0];
         let ctx = overlayCanvas.getContext("2d");
         if (eventObj.target.nodeName === 'BUTTON'){
             return;
@@ -697,6 +727,9 @@ class Graph {
                 if (eventObj.buttons === 0) {
                     // No mouse button.
                     this.lastXY = {x: -1, y: -1};
+                    this._doMouseOver(eventObj.offsetX, eventObj.offsetY);
+                    _doMouseOver(offsetX, offsetY);
+                    break;
                 }
                 
                 if (eventObj.buttons === 1) {
@@ -707,36 +740,7 @@ class Graph {
                         ctx.fillRect(this.lastXY.x, this.lastXY.y, eventObj.offsetX - this.lastXY.x, eventObj.offsetY - this.lastXY.y);
                     } else {
                         // Pan.
-                        if ((this.lastXY.x === -1) || (this.lastXY.y === -1)) {
-                            return;
-                        }
-                        if ((!objectExists(this.lastLayout))       ||
-                            (!objectExists(this.lastLayout.graph)) ||
-                            (!objectExists(this.lastBounds))       ||
-                            (!objectExists(this.lastBounds.x))     ||
-                            (!objectExists(this.lastBounds.y))) {
-                            return;
-                        }
-                        let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
-                        let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
-                        let dlx = sx * (this.lastXY.x - eventObj.offsetX);
-                        let dly = sy * (this.lastXY.y - eventObj.offsetY);
-                        let lx = this.lastBounds.x.min + dlx;
-                        let gx = this.lastBounds.x.max - this.lastBounds.x.min;
-                        let ly = this.lastBounds.y.min + dly;
-                        let gy = this.lastBounds.y.max - this.lastBounds.y.min;
-                        this.lastXY.x = eventObj.offsetX;
-                        this.lastXY.y = eventObj.offsetY;
-                        if (objectExists(this.maxBounds)) {
-                            lx = (lx + gx < this.maxBounds.x.max) ? lx : this.maxBounds.x.max - gx;
-                            lx = (lx > this.maxBounds.x.min) ? lx : this.maxBounds.x.min;
-                            ly = (ly + gy < this.maxBounds.y.max) ? ly : this.maxBounds.max - gy;
-                            ly = (ly > this.maxBounds.y.min) ? ly : this.maxBounds.y.min;
-                        }
-           
-                        $canvasParent.find('.ggGraph_stepOut').css('display', 'block');
-                        $canvasParent.find('.ggGraph_stepReset').css('display', 'block');                
-                        this.draw({min: lx, max: lx + gx}, {min: ly, max : ly + gy});
+                        this._doPan(eventObj.offsetX, eventObj.offsetY);                        
                     }
                 }
                 break;
@@ -786,8 +790,8 @@ class Graph {
                         ly = ((ly - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
                         hy = ((hy - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
                         this.zoom.push( {x:{min: lx, max: hx}, y:{min: ly, max : hy}});
-                        $canvasParent.find('.ggGraph_stepOut').css('display', 'block');
-                        $canvasParent.find('.ggGraph_stepReset').css('display', 'block');                
+                        this.graphElements.$zoomOut.css('display', 'block');
+                        this.graphElements.$zoomReset.css('display', 'block');                           
                         this.draw({min: lx, max: hx}, {min: ly, max : hy});
                     } else {
                         // On mouse up push the pan change.

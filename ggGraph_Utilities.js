@@ -157,3 +157,58 @@ function isElement(obj) {
         (typeof obj.nodeType === 1) && 
         (typeof obj.nodeName === "string");
 }
+
+/**
+ * @brief   Turn a value into a short string for axis markings.
+ *
+ * @param   val     Value to round.
+ * @param   divs    Scale as power of tens of min/max range the text is relevant to.
+ */
+function roundToString(val, divs) {
+    // How rounding works:
+    // say val = 0.150000001, and divs = 0.1 That means the whole span range is >0 and < 1
+    // Round to nearest 1/100th of divs.
+    // val              divs      result
+    // 0.15000001       0.1       Math.round(val*10000)/10000
+    // 0.15000001       1         Math.round(val*1000)/1000
+    // 0.15000001       10        Math.round(val*100)/100
+    // 0.15000001       100       Math.round(val*10)/10
+    // 0.15000001       1000      Math.round(val)
+    // 0.15000001       10000     Math.round(val/10)*10
+    // 0.15000001       100000    Math.round(val/100)*100
+    // 0.15000001       1000000   Math.round(val/1000)*1000
+    if (divs < 1000) {
+        let s = 1000/divs;
+        val = Math.round(val * s) / s;
+    }
+    if (divs > 1000) {
+        let s = divs / 1000;
+        val = Math.round(val / s) * s;
+    }
+    
+    // To string.
+    let valStr = '' + val;
+    let period = valStr.indexOf('.');
+    if (period < 0) {
+        let clipPos = valStr.length;
+        for (let ii = clipPos - 1; ii > period; ii--){
+            if (valStr[ii] === '0') {
+                clipPos--;
+            } else {
+                break;
+            }
+        }
+        if (clipPos < valStr.length) {   
+            if (valStr.length - clipPos > 12) {
+                valStr = ''  + (val/1000000000000) + ' T';
+            } else if (valStr.length - clipPos > 9) {
+                valStr = ''  + (val/1000000000) + ' B';
+            } else if (valStr.length - clipPos > 6) {
+                valStr = ''  + (val/1000000) + ' M';
+            } else if (valStr.length - clipPos > 3) {
+                valStr = ''  + (val/1000) + ' k';                
+            }                
+        }
+    }
+    return valStr;        
+}
