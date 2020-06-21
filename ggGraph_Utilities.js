@@ -90,7 +90,7 @@ function drawCenteredText(ctx, color, fontName, textSizePx, layout, textStr) {
     }
     let tw = ctx.measureText(textStr).width;
     ctx.fillStyle = color;
-    ctx.font = "" + textStr + "px " + fontName;
+    ctx.font = "" + textSizePx + "px " + fontName;
     ctx.fillText(
         textStr, 
         layout.x + (layout.w - tw) / 2, 

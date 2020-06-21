@@ -669,26 +669,35 @@ class Graph {
     /**
      * @brief   Using "this" and mouse offset x,y, do a pan operation.
      *
+     * @param   ctx         2D overlay context.
      * @param   offsetX     Event's offsetX mouse value.
      * @param   offsetY     Event's offsetY mouse value.
      */
-    _doMouseOver(offsetX, offsetY) {
+    _doMouseOver(ctx, offsetX, offsetY) {
         // Look for hover over, sx,sy scales screen to data, px,py is data space x,y.
         let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
         let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
-        let px = (offsetX * sy) + this.lastBounds.x.min;
-        let py = (offsetY * sy) + this.lastBounds.y.min;
+        let px = ((offsetX - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
+        let py = ((offsetY - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
         
+        // Not over anything if not +/- 20 pixels.
+        let dx = 20 * sx; 
+        let dy = 20 * sy;
+        
+        // We use inverse sx and sy in the loop.
+        sx = 1 / sx;
+        sy = 1 / sy;
+        
+        let best = {range: undefined, series: undefined, cache: -1, index: -1 };
         if (this.graphOptions.main.graphType === '2D') {
-            let best = {found: false, msg: '', range: undefined, x: -1, y: -1, shape: undefined, color: undefined};
             for (let ii = 0; ii < this.series.length; ii++) {
-                best = this.series[ii].mouseOver2D(px, py, sx, sy, best);
+                best = this.series[ii].mouseOver2D(px, py, dx, dy, sx, sy, best);
             }
-           
-            if (best.found) {
+            if (best.series !== undefined) {
                 // Show it.
+                best.series.drawMouseOver2D(ctx, this.lastLayout.graph, this.lastBounds, best);
             }
-        }
+        }                   
     }
     
     /**
@@ -727,8 +736,8 @@ class Graph {
                 if (eventObj.buttons === 0) {
                     // No mouse button.
                     this.lastXY = {x: -1, y: -1};
-                    this._doMouseOver(eventObj.offsetX, eventObj.offsetY);
-                    _doMouseOver(offsetX, offsetY);
+                    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                    this._doMouseOver(ctx, eventObj.offsetX, eventObj.offsetY);
                     break;
                 }
                 
