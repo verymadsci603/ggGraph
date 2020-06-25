@@ -19,6 +19,7 @@
   * @return Object with a line's options set.
   */
 function make_seriesOptions(
+    name,
     lineColor, 
     markerShape, 
     markerColor, 
@@ -27,12 +28,13 @@ function make_seriesOptions(
     yAxisIndex) {
     
     return {
+        name:               name,
         defaultLineColor:   lineColor,
         defaultMarkerColor: markerColor,
         defaultMarkerShape: markerShape,
         defaultMarkerSize:  markerSize,
-        xAxisIndex: xAxisIndex,
-        yAxisIndex: yAxisIndex};        
+        xAxisIndex:         xAxisIndex,
+        yAxisIndex:         yAxisIndex};        
 }
 
 /** 
@@ -46,6 +48,7 @@ function make_seriesOptions(
 function default_seriesOptions(seriesOptions, themeColor) {
     if ((seriesOptions === undefined) || (seriesOptions === none)) {
         return {
+            name: '',
             defaultLineColor:   themeColor,
             defaultMarkerColor: undefined,
             defaultMarkerShape: undefined,
@@ -54,6 +57,7 @@ function default_seriesOptions(seriesOptions, themeColor) {
             yAxisIndex:         0};
     }
     return {
+        name:               defaultObject(seriesOptions.name,        ''),
         defaultLineColor:   defaultObject(seriesOptions.lineColor,   themeColor),
         defaultMarkerColor: defaultObject(seriesOptions.markerColor, undefined),
         defaultMarkerShape: defaultObject(seriesOptions.markerShape, undefined),
@@ -299,14 +303,22 @@ function make_graphOptions(
             boxEdgeColor: boxEdgeColor,
             textColor: textColor,
             textSizePx: textSizePx,
-            margin: margin},
+            margin: margin,
+            xSummary: { 
+                behavior: 'onzoom', // or 'always' or 'none'
+                sizePercent: 25,    // 0 to 100%.
+                sizeMinPixels: 100, // Min pixels.
+                sizeMaxPixels: 400, // Max pixels.                
+                markerColor: '#808080',
+                alignment: 'top'} // 'top' or 'bottom'
+        },
         title : titleOptions,
         banner: bannerOptions,
         legend: legendOptions,
         xAxis: xAxisOptions,
         yAxis: yAxisOptions,
         yAxis2: yAxisOptions2,
-        zAxis: zAxisOptions,
+        zAxis: zAxisOptions
         };       
 }
 

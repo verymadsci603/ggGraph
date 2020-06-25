@@ -159,9 +159,10 @@ class Graph {
      * @param   ctx             Context.
      * @param   canvas_layout   Size/spacing for the axis.
      * @param   dataBoundsX     X bounds.
-     * @param   dataBoundsY     Y bounds.     
+     * @param   dataBoundsY     Y bounds.  
+     * @param   useMain         If true, use main else summary.     
      */
-    _computeAxis(ctx, canvas_layout, dataBoundsX, dataBoundsY) {
+    _computeAxis(ctx, canvas_layout, dataBoundsX, dataBoundsY, useMain) {
         // Compute the bounds for x, y on the axis
         // Determine the labels to use.
         
@@ -204,10 +205,17 @@ class Graph {
         let mx = [ lx, 0, hx, 1]; // left to right.
         let my = [ hy, 0, ly, 1]; // bottom to top.
         
-        mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxis.w, 
-            canvas_layout.xAxis.h, this.graphOptions.main.margin, this.graphOptions.xAxis);
-        my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxis.w, 
-            canvas_layout.yAxis.h, this.graphOptions.main.margin, this.graphOptions.yAxis);
+        if (useMain) {
+            mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxis.w, 
+                canvas_layout.xAxis.h, this.graphOptions.main.margin, this.graphOptions.xAxis);
+            my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxis.w, 
+                canvas_layout.yAxis.h, this.graphOptions.main.margin, this.graphOptions.yAxis);
+        } else {
+            mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxisSum.w, 
+                canvas_layout.xAxisSum.h, this.graphOptions.main.margin, this.graphOptions.xAxis);
+            my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxisSum.w, 
+                canvas_layout.yAxisSum.h, this.graphOptions.main.margin, this.graphOptions.yAxis);
+        }
             
         return {
             // Marker values.
@@ -224,7 +232,7 @@ class Graph {
      * @param   box     Bounding box: x,y,w,h
      * @param   opt     Possible option.
      * @param   isAxis  Is this an axis.
-     */
+     */ 
     _computeBox(ctx, box, opt, isAxis) {
         
         let margin = objectExists(this.graphOptions.main.margin) ? this.graphOptions.main.margin : 4;
@@ -238,6 +246,9 @@ class Graph {
                         h += margin;
                     }
                 } 
+                if (objectExists(opt.minSize)) {
+                    h = h > opt.minSize ? h : opt.minSize;
+                }
                 if (isAxis) {
                     h += opt.textSizePx + (objectExists(opt.markerSizePx) ? opt.markerSizePx : 6);
                 }
@@ -257,6 +268,9 @@ class Graph {
                 ctx.font = "" + opt.textSizePx + "px Verdana";
                 let w = offset + ctx.measureText(opt.textStr).width;
                 w = w > opt.textSizePx * 5 ? w : opt.textSizePx * 5;
+                if (objectExists(opt.minSize)) {
+                    w = w > opt.minSize ? w : opt.minSize;
+                }
                 return [{
                     x: opt.loc === 'left' ? box.x : box.x + box.w - w, 
                     y: box.y,
@@ -283,17 +297,21 @@ class Graph {
         let box = {x: 0, y: 0, w: width, h: height};
         if (!objectExists(this.graphOptions)) {
             return {
-                banner: null,
-                title:  null,
-                legend: null,
-                graph:  box,
-                xAxis:  null,
-                yAxis:  null,
-                yAxis2: null};
+                banner:   undefined,
+                title:    undefined,
+                legend:   undefined,
+                graph:    box,
+                xSummary: undefined, 
+                xAxisSum: undefined,
+                yAxisSum: undefined,
+                xAxis:    undefined,
+                yAxis:    undefined,
+                yAxis2:   undefined};
         }
-        let banner = undefined;
-        let title = undefined;
-        let legend = undefined;
+        let banner   = undefined;
+        let title    = undefined;
+        let legend   = undefined;
+        let xSummary = undefined;
         
         [banner, box] = this._computeBox(ctx, box, this.graphOptions.banner, false);
         [title,  box] = this._computeBox(ctx, box, this.graphOptions.title,  false);
@@ -337,11 +355,47 @@ class Graph {
                 xAxis.w -= yAxis2.w;
             }
         }
+        
+        let xAxisSum = undefined;
+        let yAxisSum = undefined;
+
+        if (objectExists(this.graphOptions.main) && objectExists(this.graphOptions.main.xSummary)) {
+            let behavior = defaultObject(this.graphOptions.main.xSummary.behavior, 'onzoom');
+            
+            if (((this.zoom.length > 0) && (behavior === 'onzoom')) || behavior === 'always') {
+                let percent = defaultObject(this.graphOptions.main.xSummary.sizePercent, 25);
+                percent = percent < 1 ? 1 : (percent > 100 ? 100 : percent);
+                let alignment = defaultObject(this.graphOptions.main.xSummary.alignment, 'top');
+                let xSumHeight = box.h * percent / 100;
+                let minPixels = defaultObject(this.graphOptions.main.xSummary.sizeMinPixels, 0);
+                xSumHeight = xSumHeight > minPixels ? xSumHeight : minPixels;
+                if (objectExists(this.graphOptions.main.xSummary.sizeMaxPixels)) {
+                    xSumHeight = xSumHeight < this.graphOptions.main.xSummary.sizeMaxPixels ? 
+                        xSumHeight : this.graphOptions.main.xSummary.sizeMaxPixels;
+                }
+                [xSummary, box] = this._computeBox(
+                    ctx, 
+                    box, 
+                    {borderSizePx: 0, loc: alignment, show: true, minSize: xSumHeight}, 
+                    false);
+                yAxis.h -= xSummary.h;
+                if (alignment === 'top') {
+                    yAxis.y = xSummary.y + xSummary.h;
+                }
+                xAxisSum = {x: xAxis.x, w: xAxis.w, h: xAxis.h, y: xSummary.y + xSummary.h - xAxis.h };
+                xSummary.h -= xAxisSum.h;   
+                yAxisSum = {x: yAxis.x, w: yAxis.w, h: xSummary.h, y: xSummary.y};                
+            }
+        }        
+        
         return {
             banner: banner,
             title: title,
             legend: legend,
             graph: box,
+            xSummary: xSummary,
+            xAxisSum: xAxisSum,
+            yAxisSum: yAxisSum,
             xAxis: xAxis,
             yAxis: yAxis,
             yAxis2: yAxis};
@@ -404,7 +458,9 @@ class Graph {
         let ctx = canvas.getContext("2d");
         let canvas_layout = this._computeLayout(ctx, cw, ch);
         this.lastLayout = canvas_layout;
-        let axisInfo = this._computeAxis(ctx, canvas_layout, dataBoundsX, dataBoundsY);
+        let axisInfo = this._computeAxis(ctx, canvas_layout, dataBoundsX, dataBoundsY, true);
+        let summaryAxisInfo = (canvas_layout.xSummary !== undefined) ? 
+            this._computeAxis(ctx, canvas_layout, undefined, undefined, false) : undefined; 
         this.lastBounds.x = { min: axisInfo.xBounds.min, max: axisInfo.xBounds.max};
         this.lastBounds.y = { min: axisInfo.yBounds.min, max: axisInfo.yBounds.max};
         this.graphElements.$zoomOut.css('top', canvas_layout.graph.y);
@@ -433,20 +489,78 @@ class Graph {
                     this.series[ii].draw2D(ctx, axisInfo, canvas_layout.graph);
                 }
                 
-                // Now clear behind the axis.
+                // Clear out around the graph.
+                let right = canvas_layout.graph.x + canvas_layout.graph.w;
+                let bot = canvas_layout.graph.y + canvas_layout.graph.h;
+                ctx.clearRect(0, 0, canvas_layout.graph.x, ch);     // Left.
+                ctx.clearRect(right, 0, cw - right, ch);            // Right.
+                ctx.clearRect(0, 0, cw, canvas_layout.graph.y);     // Top.
+                ctx.clearRect(0, bot, cw, ch - bot);                // Bottom.
+                
+                if (canvas_layout.xSummary !== undefined) {
+                    
+                    let xmarksS  = objectExists(summaryAxisInfo.xBounds)  ? summaryAxisInfo.xBounds.marks  : undefined;
+                    let ymarksS  = objectExists(summaryAxisInfo.yBounds)  ? summaryAxisInfo.yBounds.marks  : undefined;
+                    
+                    this.drawGrid(ctx, true,  canvas_layout.xSummary, xmarksS,  this.graphOptions.xAxis);
+                    this.drawGrid(ctx, false, canvas_layout.xSummary, ymarksS,  this.graphOptions.yAxis);
+                    
+                    for (let ii = 0; ii < this.series.length; ii++) {
+                        this.series[ii].draw2D(
+                            ctx, 
+                            summaryAxisInfo, 
+                            canvas_layout.xSummary);
+                    }
+                    
+                    // Draw the zoomed box.
+                    // data to screen, so dividing by the data range, multiply by screen range.
+                    // the box is defined by: axisInfo.xBounds.min .max
+                    ctx.strokeStyle = objectExists(this.graphOptions.main.xSummary.markerColor) ?
+                        this.graphOptions.main.xSummary.markerColor: '#808080';
+                    let xg = canvas_layout.xSummary.w / (summaryAxisInfo.xBounds.max - summaryAxisInfo.xBounds.min);
+                    let yg = canvas_layout.xSummary.h / (summaryAxisInfo.yBounds.max - summaryAxisInfo.yBounds.min);
+                    let xo = -summaryAxisInfo.xBounds.min * xg + canvas_layout.xSummary.x;
+                    let yo = -summaryAxisInfo.yBounds.min * yg + canvas_layout.xSummary.y; 
+                    let dxr = (axisInfo.xBounds.max - axisInfo.xBounds.min) * xg;
+                    let dyr = (axisInfo.yBounds.max - axisInfo.yBounds.min) * yg;
+                    ctx.lineWidth = 2;
+                    dxr = dxr < 8 ? 8 : dxr;
+                    dyr = dyr < 8 ? 8 : dyr;
+                    ctx.strokeRect(
+                        axisInfo.xBounds.min * xg + xo, 
+                        axisInfo.yBounds.min * yg + yo, 
+                        dxr, dyr);
+                            
+                    // Do the zoom axis.
+                    ctx.strokeStyle = objectExists(this.graphOptions.xAxis.markerColor ) ? 
+                        this.graphOptions.xAxis.markerColor : '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y);
+                    ctx.lineTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y + canvas_layout.xSummary.h);
+                    ctx.lineTo(canvas_layout.xSummary.x + canvas_layout.xSummary.w, 
+                               canvas_layout.xSummary.y + canvas_layout.xSummary.h);
+                    ctx.stroke();
+                    
+                    // Draw the two summary axises.
+                    this.drawAxis(ctx, true,  this.graphOptions.xAxis, canvas_layout.xAxisSum, xmarksS, true);
+                    this.drawAxis(ctx, false, this.graphOptions.yAxis, canvas_layout.yAxisSum, ymarksS, true);
+                
+                }          
+                                               
+                // Fill behind the axises.
                 ctx.fillStyle = this.graphOptions.main.backgroundColor;
                 let axiss = [canvas_layout.xAxis, canvas_layout.yAxis, canvas_layout.xAxis];
                 for (let ii = 0; ii < 3; ii++) {
                     if (objectExists(axiss[ii])) {
-                        ctx.clearRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
                         ctx.fillRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
                     }
                 }
-                
+
                 // Paint the axis.
-                this.drawAxis(ctx, true,  this.graphOptions.xAxis,  canvas_layout.xAxis,  xmarks);
-                this.drawAxis(ctx, false, this.graphOptions.yAxis,  canvas_layout.yAxis,  ymarks);
-                this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2);
+                this.drawAxis(ctx, true,  this.graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
+                this.drawAxis(ctx, false, this.graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
+                this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
                 
                 // Paint the legend, title, banner.
                 this.drawTextOption(ctx, this.graphOptions.legend, canvas_layout.legend);
@@ -472,7 +586,7 @@ class Graph {
         ctx.beginPath();
         let clr = opts.graphlineColor;
         clr = (clr === undefined) || (clr === null) ? '#000000' : clr;
-        ctx.fillStyle = clr
+        ctx.strokeStyle = clr
         ctx.setLineDash(toCanvasDash(opts.graphLineDash));
         
         if (isHorizontal) {
@@ -500,8 +614,9 @@ class Graph {
      * @param   opt             Options.
      * @param   loc             Location layout.
      * @param   marks           Axis markings array.
+     * @param   skipAxisText    Flag, if true no axis text.
      */
-    drawAxis(ctx, isHorizontal, opt, loc, marks) {
+    drawAxis(ctx, isHorizontal, opt, loc, marks, skipAxisText) {
         if ((!objectExists(opt)) || (!objectExists(loc)) || (opt.show === false)) {
             return;
         }
@@ -513,7 +628,7 @@ class Graph {
             ctx.fillRect(loc.x, loc.y, loc.w, loc.h);
         }
 
-        if (objectExists(opt.textStr) && hasText) {  
+        if (objectExists(opt.textStr) && hasText && (!skipAxisText)) {  
             if (isHorizontal) {
                 drawCenteredFloorText(ctx, opt.textColor, 'Verdana', opt.textSizePx, loc, opt.textStr);
             } else {
@@ -534,7 +649,6 @@ class Graph {
         ctx.fillStyle = opt.textColor;
         let margin = objectExists(this.graphOptions.main.margin) ? this.graphOptions.main.margin : 4;
         let mark = objectExists(opt.markerSizePx) ? opt.markerSizePx : 6;
-        
         
         if (isHorizontal) {
             
@@ -660,6 +774,10 @@ class Graph {
             lx = (lx > this.maxBounds.x.min) ? lx : this.maxBounds.x.min;
             ly = (ly + gy < this.maxBounds.y.max) ? ly : this.maxBounds.max - gy;
             ly = (ly > this.maxBounds.y.min) ? ly : this.maxBounds.y.min;
+            
+            // Limit to data bounds.
+            lx = minMax(lx, this.maxBounds.x.min, this.maxBounds.x.max);
+            ly = minMax(ly, this.maxBounds.y.min, this.maxBounds.y.max);
         }
         this.graphElements.$zoomOut.css('display', 'block');
         this.graphElements.$zoomReset.css('display', 'block');            
@@ -674,6 +792,13 @@ class Graph {
      * @param   offsetY     Event's offsetY mouse value.
      */
     _doMouseOver(ctx, offsetX, offsetY) {
+        if ((offsetX < this.lastLayout.graph.x) ||
+            (offsetY < this.lastLayout.graph.y) ||
+            (offsetX > this.lastLayout.graph.x + this.lastLayout.graph.w) || 
+            (offsetY > this.lastLayout.graph.y + this.lastLayout.graph.h)) {
+            return;
+        }
+            
         // Look for hover over, sx,sy scales screen to data, px,py is data space x,y.
         let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
         let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
@@ -792,12 +917,20 @@ class Graph {
                             return;
                         }
                         // Release of left click, no shift key so, zoom!
+                        // Compute the data lx, hx, ly, hy from screen.
                         let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
                         let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
                         lx = ((lx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
                         hx = ((hx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
                         ly = ((ly - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
                         hy = ((hy - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
+                        
+                        // Limit to data bounds.
+                        lx = minMax(lx, this.maxBounds.x.min, this.maxBounds.x.max);
+                        hx = minMax(hx, this.maxBounds.x.min, this.maxBounds.x.max);
+                        ly = minMax(ly, this.maxBounds.y.min, this.maxBounds.y.max);
+                        hy = minMax(hy, this.maxBounds.y.min, this.maxBounds.y.max);
+                        
                         this.zoom.push( {x:{min: lx, max: hx}, y:{min: ly, max : hy}});
                         this.graphElements.$zoomOut.css('display', 'block');
                         this.graphElements.$zoomReset.css('display', 'block');                           
@@ -970,8 +1103,8 @@ function _setupTestData() {
  */
 function _setupTestLineGraph(targetElement) {
     let g = new Graph(targetElement);
-    let opt1 = make_seriesOptions('#ff0000', 'none', 'none', 0, 0, 0);
-    let opt2 = make_seriesOptions('#00ff00', 'none', 'none', 0, 0, 0);
+    let opt1 = make_seriesOptions('red series', '#ff0000', 'none', 'none', 0, 0, 0);
+    let opt2 = make_seriesOptions('green series', '#00ff00', 'none', 'none', 0, 0, 0);
     g.addSeries(new LineSeries(
         opt1,
         'test_guid_1x', 

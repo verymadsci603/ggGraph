@@ -180,14 +180,49 @@ class LineSeries {
         clr = objectExists(clr) ? clr : this.seriesOptions.defaultLineColor;
         clr = objectExists(clr) ? clr : '#000000';
         ctx.strokeStyle = clr;
-        ctx.strokeRect(x_screen - radh, y_screen - radh, rad, rad);
-        drawCenteredText(
-            ctx, 
-            clr, 
-            'Verdana', 
-            11, 
-            {x: x_screen, y: y_screen - 11, w: 0, h: 0}, 
-            'x: ' + x_value + ', y: ' + y_value);
+        // Box it.
+        ctx.strokeRect(x_screen - radh + 1, y_screen - radh, rad, rad);
+
+        let x_str = 'x: ' + x_value;
+        let y_str = 'y: ' + y_value;
+        let tw_n = objectExists(this.seriesOptions.name) ? ctx.measureText(this.seriesOptions.name).width : 0;
+        let tw_x = ctx.measureText(x_str).width;
+        let tw_y = ctx.measureText(y_str).width;
+        let tw = tw_x > tw_y ? 
+            (tw_x > tw_n ? tw_x : tw_n) : 
+            (tw_y > tw_n ? tw_y : tw_n);
+        
+        // Background.
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        let triangle = 4;
+        let fontSize = 11;
+        let fontSize2 = fontSize + fontSize;
+        let fontSize3 = fontSize2 + fontSize
+        let yoff = (tw_n > 0) ? y_screen - triangle - fontSize3 - fontSize : y_screen - triangle - fontSize3;
+        let ybot = (tw_n > 0) ? yoff + fontSize3 + 4 : yoff + fontSize2 + 4;
+        ctx.moveTo(x_screen - tw/2 - 2, yoff);
+        ctx.lineTo(x_screen - tw/2 - 2 + tw + 4, yoff);
+        ctx.lineTo(x_screen - tw/2 - 2 + tw + 4, ybot);
+        ctx.lineTo(x_screen - tw/2 - 2 + tw/2 + 4 + triangle, ybot);
+        ctx.lineTo(x_screen - tw/2 - 2 + tw/2 + 4, ybot + triangle);
+        ctx.lineTo(x_screen - tw/2 - 2 + tw/2 + 4 - triangle, ybot);
+        ctx.lineTo(x_screen - tw/2 - 2, ybot);
+        ctx.lineTo(x_screen - tw/2 - 2, yoff);
+        ctx.stroke();
+        ctx.fill();
+        
+        // Text.
+        ctx.font = "11px verdana";        
+        ctx.fillStyle = '#000000';        
+        if (tw_n > 0) {            
+            ctx.fillText(this.seriesOptions.name, x_screen - tw/2, yoff + fontSize - 1);
+            ctx.fillText(x_str, x_screen - tw/2, yoff + fontSize2 - 1);
+            ctx.fillText(y_str, x_screen - tw/2, yoff + fontSize3 - 1);
+        } else {            
+            ctx.fillText(x_str, x_screen - tw/2, yoff + fontSize - 1);
+            ctx.fillText(y_str, x_screen - tw/2, yoff + fontSize2 - 1);
+        }
     }
     
     /**

@@ -35,10 +35,15 @@ function objectExists(obj) {
  * @return  Either obj, or defaultValue.
  */
 function defaultObject(obj, defaultValue) {
-    return ((obj === undefined) || (obj === null) || (obj === 'none'))
+    return ((obj === undefined) || (obj === null) || (obj === 'none')) ?
         defaultValue : obj;    
 }
 
+function minMax(value, min, max) {
+    value = value > min ? value : min;
+    return value < max ? value : max;
+}
+                        
 /**
  * @brief   Turn 'solid', 'dash' or 'dashdot' or array for canvas.setLineDash
  * 
