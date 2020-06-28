@@ -23,6 +23,21 @@ function objectExists(obj) {
 }
 
 /** 
+ * @brief   Check to see if an object is not "real".
+ *
+ * @note    Checks for undefined and null, but also 'none'
+ *          to support servers that generate 'none' in JSON
+ *          like Python does (against the standard).
+ *
+ * @param   obj     Object to check.
+ * 
+ * @return  Checks against undefined, null and 'none'.
+ */
+function objectNotExist(obj) {
+    return ((obj === undefined) || (obj === null) || (obj === 'none'));        
+}
+
+/** 
  * @brief   If Obj is real return it, else return default.
  *
  * @note    Checks for undefined and null, but also 'none'
@@ -39,9 +54,36 @@ function defaultObject(obj, defaultValue) {
         defaultValue : obj;    
 }
 
+/** 
+ * @brief   Bound value to within min, max.
+ * 
+ * @param   value   Value to bound.
+ * @param   min     Minimum value.
+ * @param   max     Maximum value.
+ *
+ * @return  A value between the bounds.
+ */
 function minMax(value, min, max) {
     value = value > min ? value : min;
     return value < max ? value : max;
+}
+
+/**
+ * @brief   Is x,y inside the box?
+ *
+ * @param   x   X coordinate.
+ * @param   y   Y coordinate.
+ * @param   box Structure of {x: y: w: h: }
+ *
+ * @return  True if inside.
+ */
+function inBox(x, y, box) {
+    if ((box === undefined) || (box === null)) { 
+        return false;
+    }
+    
+    return ((x > box.x) && (x < box.x + box.w) &&
+            (y > box.y) && (y < box.y + box.h));       
 }
                         
 /**

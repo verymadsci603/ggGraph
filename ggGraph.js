@@ -231,26 +231,79 @@ class Graph {
      * @param   ctx     Context 2d.
      * @param   box     Bounding box: x,y,w,h
      * @param   opt     Possible option.
-     * @param   isAxis  Is this an axis.
+     * @param   kind    Is this an axis, legend or normal
      */ 
-    _computeBox(ctx, box, opt, isAxis) {
-        
+    _computeBox(ctx, box, opt, kind) {
+        let isAxis = kind === 'axis';
+        let isLegend = kind === 'legend';
         let margin = objectExists(this.graphOptions.main.margin) ? this.graphOptions.main.margin : 4;
         if ((this.graphOptions) && (opt) && (opt.show)) {
-            let offset = (objectExists(opt.borderSizePx) ? parseInt(opt.borderSizePx) * 2 : 0) + margin;
+            // Either way, both need this.
+            let textSize = defaultObject(opt.textSizePx, 11);
+            
             if ((opt.loc == 'top') || (opt.loc == 'bottom')) { 
-                let h = offset;
-                if (objectExists(opt.textStr) && (opt.textStr.length > 0)) {
-                    h += opt.textSizePx;
-                    if (isAxis) {                        
-                        h += margin;
+                // Textbox, top/bottom:
+                //   margin + textSizePx + margin
+                // Axis no text:
+                //   marker + margin + textSizePx + margin
+                // Axis & text:
+                //   marker + margin + textSizePx + margin + textSizePx + margin
+                // Legend no text:
+                //   margin + rows * (margin + textSizePx)
+                // Legend & text:
+                //   margin + (rows + 1) * (margin + textSizePx)
+                // 
+                // It's mostly just about the rows ...
+                //      Kind        Rows        Size
+                // Textbox no text  0           margin
+                // Textbox text     1           margin + rows * (textSizePx + margin)
+                // Axis no text     1           marker + margin + rows * (textSizePx + margin)
+                // Axis & text      2           marker + margin + rows * (textSizePx + margin)
+                // Legend no text   crows       margin + rows * (textSizePx + margin)
+                // Legend & text    crows + 1   margin + rows * (textSizePx + margin)
+                //
+                // Always += 2*opt.borderSizePx if it exists.
+                let rows = 0;
+                
+                // Calculate rows for legend, if it's a legend.
+                if (isLegend) {
+                    if (this.series.length > 1) {
+                        ctx.font = "" + textSize + "px Verdana";
+                        // Calculate largest width.
+                        let w = 0;
+                        let items = this.series.length;
+                        for (let ii = 0; ii < items; ii++) {
+                            let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
+                            w = w > wi ? w : wi;                        
+                        }
+                        
+                        // Margin, name, margin symbology,
+                        w += 2 * margin + textSize * 2; // margin + symbology.
+                        let maxCols = Math.floor(box.w / w);
+                        maxCols = maxCols < 1 ? 1 : maxCols;
+                        rows = Math.ceil(items / maxCols);
+                    } else {
+                        rows = this.series.length;
                     }
-                } 
+                }
+                
+                // Add in any text label...
+                if (objectExists(opt.textStr) && (opt.textStr.length > 0)) {
+                    rows += 1;
+                }
+                
+                // Axis add on.
+                let h = margin + rows * (textSize + margin);
+                if (isAxis) {
+                    h += defaultObject(opt.markerSizePx, 6);
+                }
+                
+                // Border.
+                h += (objectExists(opt.borderSizePx) ? parseInt(opt.borderSizePx) * 2 : 0) + margin;
+
+                // Ensure minimum size.
                 if (objectExists(opt.minSize)) {
                     h = h > opt.minSize ? h : opt.minSize;
-                }
-                if (isAxis) {
-                    h += opt.textSizePx + (objectExists(opt.markerSizePx) ? opt.markerSizePx : 6);
                 }
                 
                 // If it has text, 
@@ -265,9 +318,42 @@ class Graph {
                     w: box.w,
                     h: box.h - h}];
             } else {
-                ctx.font = "" + opt.textSizePx + "px Verdana";
-                let w = offset + ctx.measureText(opt.textStr).width;
-                w = w > opt.textSizePx * 5 ? w : opt.textSizePx * 5;
+                // Textbox, left/right:
+                //
+                // tw = max text width.
+                //
+                // Textbox or legend:
+                //   margin + tw + (margin * (tw != 0))
+                // Axis:
+                //   += marker + margin.
+                let tw = 0;
+                
+                ctx.font = "" + textSize + "px Verdana";
+                
+                // Legend.
+                if (isLegend) {
+                    // Calculate largest width.
+                    for (let ii = 0; ii < this.series.length; ii++) {
+                        let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
+                        tw = tw > wi ? tw : wi;                        
+                    }
+                }
+                // Text if it exists.
+                if (objectExists(opt.textStr) && objectExists(opt.textColor) && (opt.textSizePx > 0)) {
+                    let wi = ctx.measureText(opt.textColor).width;
+                    tw = tw > wi ? tw : wi; 
+                }
+                let w = margin + ((tw === 0) ? 0 : tw + margin);
+                
+                // If axis...
+                if (isAxis) {
+                    w += defaultObject(opt.markerSizePx, 6);
+                }
+                
+                // Border.
+                w += (objectExists(opt.borderSizePx) ? parseInt(opt.borderSizePx) * 2 : 0) + margin;
+                
+                // Minimum check.
                 if (objectExists(opt.minSize)) {
                     w = w > opt.minSize ? w : opt.minSize;
                 }
@@ -313,9 +399,9 @@ class Graph {
         let legend   = undefined;
         let xSummary = undefined;
         
-        [banner, box] = this._computeBox(ctx, box, this.graphOptions.banner, false);
-        [title,  box] = this._computeBox(ctx, box, this.graphOptions.title,  false);
-        [legend, box] = this._computeBox(ctx, box, this.graphOptions.legend, false);
+        [banner, box] = this._computeBox(ctx, box, this.graphOptions.banner);
+        [title,  box] = this._computeBox(ctx, box, this.graphOptions.title);
+        [legend, box] = this._computeBox(ctx, box, this.graphOptions.legend, 'legend');
         
         let xopt = deepCopy(this.graphOptions.xAxis);
         let yopt = deepCopy(this.graphOptions.yAxis);
@@ -332,9 +418,9 @@ class Graph {
         let xAxis = undefined;
         let yAxis = undefined;
         let yAxis2 = undefined;
-        [xAxis,  box] = this._computeBox(ctx, box, xopt, true);
-        [yAxis,  box] = this._computeBox(ctx, box, yopt, true);
-        [yAxis2, box] = this._computeBox(ctx, box, yopt2, true);
+        [xAxis,  box] = this._computeBox(ctx, box, xopt,  'axis');
+        [yAxis,  box] = this._computeBox(ctx, box, yopt,  'axis');
+        [yAxis2, box] = this._computeBox(ctx, box, yopt2, 'axis');
 
         if (yAxis) {
             yAxis.y += 1;
@@ -376,8 +462,7 @@ class Graph {
                 [xSummary, box] = this._computeBox(
                     ctx, 
                     box, 
-                    {borderSizePx: 0, loc: alignment, show: true, minSize: xSumHeight}, 
-                    false);
+                    {borderSizePx: 0, loc: alignment, show: true, minSize: xSumHeight});
                 yAxis.h -= xSummary.h;
                 if (alignment === 'top') {
                     yAxis.y = xSummary.y + xSummary.h;
@@ -563,7 +648,7 @@ class Graph {
                 this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
                 
                 // Paint the legend, title, banner.
-                this.drawTextOption(ctx, this.graphOptions.legend, canvas_layout.legend);
+                this.drawLegend(ctx, this.graphOptions.legend, canvas_layout.legend);
                 this.drawTextOption(ctx, this.graphOptions.title,  canvas_layout.title);
                 this.drawTextOption(ctx, this.graphOptions.banner, canvas_layout.banner);
             }
@@ -718,6 +803,116 @@ class Graph {
     }
     
     /**
+     * @brief   Draw the legend
+     *
+     * @param   ctx     Context 2d.
+     * @param   opt     Options structure.
+     * @param   loc     Location structure.
+     */
+    drawLegend(ctx, opt, loc) {
+        if (objectNotExist(opt) || objectNotExist(loc) || (opt.show === false)) {
+            return;
+        }
+        
+        let margin = this.graphOptions.main.margin; 
+        
+        // Background.
+        if (objectExists(opt.backgroundColor)) {
+            ctx.fillStyle = opt.backgroundColor;
+            ctx.fillRect(loc.x, loc.y, loc.w, loc.h);
+        }
+        
+        // Border.
+        if (objectExists(opt.boxEdgeColor) && (opt.borderSizePx > 0)) {
+            ctx.strokeStyle = opt.boxEdgeColor;
+            ctx.lineWidth = opt.borderSizePx;
+            ctx.strokeRect(loc.x, loc.y, loc.w, loc.h);
+        }
+        
+        // Vertical or horizontal it is the same, calculate the row, 
+        // determine offset and step, and go for it.
+        
+        // Compute the rows.
+        let textSize = defaultObject(opt.textSizePx, 11);
+        let items = this.series.length;
+        let rows = items;
+        let widths = [];
+        let maxCols = 1;
+        let maxColWidth = 0;
+        if (items > 1) {
+            let w = 0;
+            for (let ii = 0; ii < items; ii++) {
+                let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
+                widths.push(wi);
+                w = w > wi ? w : wi;                        
+            }
+                        
+            // Margin, name, margin symbology,
+            w += 2 * margin + textSize * 2; // margin + symbology.
+            maxColWidth = w;
+            maxCols = Math.floor(loc.w / w);
+            maxCols = maxCols < 1 ? 1 : maxCols;
+            maxCols = maxCols < items ? maxCols : items;
+            rows = Math.ceil(items / maxCols);
+        } 
+        let hasText = objectExists(opt.textStr) && (opt.textStr.length > 0);
+        if (hasText) {
+            rows += 1
+            let w = ctx.measureText(opt.textStr).width;
+            widths.push(w);
+        }
+        
+        // Center vertically.
+        let idealHeight = (margin + textSize) * rows + margin;
+        let vertical_margin = margin;
+        let offset = 0;
+        if (loc.h < idealHeight) {            
+            // Not big enough, shrink margin.
+            vertical_margin = (loc.h - textSize * rows) / (rows + 1);
+            vertical_margin = vertical_margin < 1 ? 1 : vertical_margin; 
+            idealHeight = (vertical_margin + textSize) * rows + vertical_margin;            
+        }
+        offset = (loc.h - idealHeight)/2;
+        offset += textSize;
+        
+        // Draw the title text if it exists.
+        ctx.fillStyle = defaultObject(opt.textColor, '#000000');
+        if (hasText) {
+            ctx.fillText(
+                opt.textStr, 
+                loc.x + (loc.w - widths[widths.length-1]) / 2, 
+                loc.y + offset); 
+            offset += textSize + vertical_margin;
+        }
+        
+        let row = 0;
+        let col = 0;
+        let colSize = loc.w / maxCols;
+        let textAligned = textSize / 4;
+        for (let ii = 0; ii < items; ii++) {
+            let x = margin + loc.x + col * colSize;
+            x += (colSize - maxColWidth)/2;
+            let y = loc.y + offset + row * (textSize + vertical_margin);
+            let sopts = this.series[ii].seriesOptions;
+            ctx.fillText(this.series[ii].seriesOptions.name, x, y);
+            ctx.strokeStyle = sopts.defaultLineColor;
+            ctx.setLineDash(toCanvasDash(sopts.graphLineDash));
+            y -= textAligned;
+            x += widths[ii] + margin;
+            ctx.beginPath();           
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + textSize * 2, y);
+            ctx.stroke();
+            
+            col += 1;
+            if (col > maxCols) {
+                col = 0;
+                row += 1;
+            }
+        }
+    }
+    
+    /**
      * @brief   Draw a text box.
      *
      * @param   ctx     Context 2d.
@@ -867,11 +1062,63 @@ class Graph {
                 }
                 
                 if (eventObj.buttons === 1) {
+                    if ((this.lastXY.x === -1) || (this.lastXY.y === -1)) {
+                        return; // Do nothing.
+                    }
+                    let in_normal = 
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.graph) &&
+                        inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.graph);
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary);
+                    let in_summary = 
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary) &&
+                        inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.xSummary);
+                    if ((!in_normal) && (!in_summary)) {
+                        // One of the points is out of bounds, don't do anything.
+                        return;
+                    }
                     if (!eventObj.shiftKey) {
                         // left move zoom.
+                        // Going to do something, so clear.
                         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-                        ctx.fillStyle = '#80808080';
-                        ctx.fillRect(this.lastXY.x, this.lastXY.y, eventObj.offsetX - this.lastXY.x, eventObj.offsetY - this.lastXY.y);
+                        let lx = this.lastXY.x;
+                        let wi = eventObj.offsetX - this.lastXY.x;
+                        let ly = this.lastXY.y;
+                        let he = eventObj.offsetY - this.lastXY.y;
+                        let mode = 'auto';
+                        ctx.fillStyle = '#80808080'; // Default.
+                        let strokeColor = '';
+                        if (objectExists(this.graphOptions.main.zoom)) {
+                            mode = defaultObject(this.graphOptions.main.zoom.currentMode, 'auto');
+                            ctx.fillStyle = defaultObject(this.graphOptions.main.zoom.fillColor, '#80808080');
+                            strokeColor = defaultObject(this.graphOptions.main.zoom.strokeColor, '');                          
+                        }
+                        let wi_abs = Math.abs(wi);
+                        let he_abs = Math.abs(he);
+                        if (mode === 'auto') {
+                            if ((wi_abs < 10) && (he_abs > 100)) {
+                                mode = 'x';
+                            }
+                            if ((he_abs < 10) && (wi_abs > 100)) {
+                                mode = 'y';
+                            }
+                        }
+                        let layoutInside = in_normal ? this.lastLayout.graph : this.lastLayout.xSummary;
+                        if (mode === 'x') {
+                            // x only zoom.
+                            ly = layoutInside.y;
+                            he = layoutInside.h;
+                        }
+                        if (mode === 'y') {
+                            lx = layoutInside.x;
+                            wi = layoutInside.w;
+                        }
+                    
+                        ctx.fillRect(lx, ly, wi, he);
+                        if (strokeColor !== '') {
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = strokeColor;
+                            ctx.strokeRect(lx, ly, wi, he);
+                        }
                     } else {
                         // Pan.
                         this._doPan(eventObj.offsetX, eventObj.offsetY);                        
@@ -912,18 +1159,57 @@ class Graph {
                 } 
                 
                 if (eventObj.which === 1) {
+                    let in_normal = 
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.graph) &&
+                        inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.graph);
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary);
+                    let in_summary = 
+                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary) &&
+                        inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.xSummary);
+                    if ((!in_normal) && (!in_summary)) {
+                        // One of the points is out of bounds, don't do anything.
+                        return;
+                    }
+
                     if (!eventObj.shiftKey) { 
                         if ((hx - lx < 4) || (hy - ly < 4)) {
                             return;
                         }
+                        
+                        let mode = 'auto';
+                        if (objectExists(this.graphOptions.main.zoom)) {
+                            mode = defaultObject(this.graphOptions.main.zoom.currentMode, 'auto');
+                        }
+                        let wi = Math.abs(hx - lx);
+                        let he = Math.abs(hy - ly);
+                        if (mode === 'auto') {
+                            if ((wi < 10) && (he > 100)) {
+                                mode = 'x';
+                            }
+                            if ((he < 10) && (wi > 100)) {
+                                mode = 'y';
+                            }
+                        }
+                        let layoutInside = in_normal ? this.lastLayout.graph : this.lastLayout.xSummary;
+                        let bounds = in_normal ? this.lastBounds : this.maxBounds;
+                        if (mode === 'x') {
+                            // x only zoom.
+                            ly = layoutInside.y;
+                            hy = layoutInside.h + ly;
+                        }
+                        if (mode === 'y') {
+                            lx = layoutInside.x;
+                            hx = layoutInside.w + lx;
+                        }
+                        
                         // Release of left click, no shift key so, zoom!
                         // Compute the data lx, hx, ly, hy from screen.
-                        let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
-                        let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
-                        lx = ((lx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
-                        hx = ((hx - this.lastLayout.graph.x) * sx) + this.lastBounds.x.min;
-                        ly = ((ly - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
-                        hy = ((hy - this.lastLayout.graph.y) * sy) + this.lastBounds.y.min;
+                        let sx = (bounds.x.max - bounds.x.min) / layoutInside.w;
+                        let sy = (bounds.y.max - bounds.y.min) / layoutInside.h;
+                        lx = ((lx - layoutInside.x) * sx) + bounds.x.min;
+                        hx = ((hx - layoutInside.x) * sx) + bounds.x.min;
+                        ly = ((ly - layoutInside.y) * sy) + bounds.y.min;
+                        hy = ((hy - layoutInside.y) * sy) + bounds.y.min;
                         
                         // Limit to data bounds.
                         lx = minMax(lx, this.maxBounds.x.min, this.maxBounds.x.max);

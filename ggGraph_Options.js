@@ -304,6 +304,11 @@ function make_graphOptions(
             textColor: textColor,
             textSizePx: textSizePx,
             margin: margin,
+            zoom: {
+                kindsAllowed: 'auto x xy y', // What is allowed, space delminited.
+                currentMode: 'auto', // Kind of zoom starting with.
+                fillColor: '#80808080',
+                strokeColor: ''},
             xSummary: { 
                 behavior: 'onzoom', // or 'always' or 'none'
                 sizePercent: 25,    // 0 to 100%.
