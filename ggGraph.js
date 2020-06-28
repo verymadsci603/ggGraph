@@ -904,6 +904,9 @@ class Graph {
             ctx.lineTo(x + textSize * 2, y);
             ctx.stroke();
             
+            // Draw the marker if it's there.
+            // sopts.markerColor .markerSizePx
+            
             col += 1;
             if (col > maxCols) {
                 col = 0;
@@ -944,20 +947,39 @@ class Graph {
      * @param   offsetY     Event's offsetY mouse value.
      */
     _doPan(offsetX, offsetY) {
-        if ((this.lastXY.x === -1) || (this.lastXY.y === -1)) {
-            return;
-        }
-        if ((!objectExists(this.lastLayout))       ||
+        
+        // If not valid state of things, return.
+        if ((this.lastXY.x === -1)                 || 
+            (this.lastXY.y === -1)                 ||
+            (!objectExists(this.lastLayout))       ||
             (!objectExists(this.lastLayout.graph)) ||
             (!objectExists(this.lastBounds))       ||
             (!objectExists(this.lastBounds.x))     ||
             (!objectExists(this.lastBounds.y))) {
             return;
         }
-        let sx = (this.lastBounds.x.max - this.lastBounds.x.min) / this.lastLayout.graph.w;
-        let sy = (this.lastBounds.y.max - this.lastBounds.y.min) / this.lastLayout.graph.h;
-        let dlx = sx * (this.lastXY.x - offsetX);
-        let dly = sy * (this.lastXY.y - offsetY);
+        
+        let bounds = this.lastBounds;
+        let layout = this.lastLayout.graph;
+        let sign = 1;
+        if (inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary)) {
+            bounds = this.maxBounds;
+            layout = this.lastLayout.xSummary;
+            sign = -1;
+        }
+        
+        // dlx, dly is the screen to data scaling of the given
+        // summary or graph region for the change in x,y
+        let sx = (bounds.x.max - bounds.x.min) / layout.w;
+        let sy = (bounds.y.max - bounds.y.min) / layout.h;
+        let dlx = sign * sx * (this.lastXY.x - offsetX);
+        let dly = sign * sy * (this.lastXY.y - offsetY);
+        
+        if ((dlx === 0) && (dly === 0)) {
+            // nothing to do.
+            return;
+        }
+        
         let lx = this.lastBounds.x.min + dlx;
         let gx = this.lastBounds.x.max - this.lastBounds.x.min;
         let ly = this.lastBounds.y.min + dly;
@@ -967,7 +989,7 @@ class Graph {
         if (objectExists(this.maxBounds)) {
             lx = (lx + gx < this.maxBounds.x.max) ? lx : this.maxBounds.x.max - gx;
             lx = (lx > this.maxBounds.x.min) ? lx : this.maxBounds.x.min;
-            ly = (ly + gy < this.maxBounds.y.max) ? ly : this.maxBounds.max - gy;
+            ly = (ly + gy < this.maxBounds.y.max) ? ly : this.maxBounds.y.max - gy;
             ly = (ly > this.maxBounds.y.min) ? ly : this.maxBounds.y.min;
             
             // Limit to data bounds.
@@ -1068,7 +1090,6 @@ class Graph {
                     let in_normal = 
                         inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.graph) &&
                         inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.graph);
-                        inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary);
                     let in_summary = 
                         inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.xSummary) &&
                         inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.xSummary);
