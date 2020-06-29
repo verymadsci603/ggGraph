@@ -76,6 +76,38 @@ class LineSeries {
         }
         return xp, yp;
     }
+
+    /**
+     * @brief   Draw legend entry.
+     *
+     * @param   ctx         Draw context.
+     * @param   textWidth   Premeasured textWidth.
+     * @param   textSize    Text size in pixels.
+     * @param   margin      Space between things.
+     * @param   x           X position.
+     * @param   y           Y position.
+     */
+    draw_legend_item(ctx, textSize, textWidth, margin, x, y) {
+        let textAligned = textSize / 4;
+        ctx.fillText(this.seriesOptions.name, x, y);
+        ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+        ctx.setLineDash(toCanvasDash(this.seriesOptions.graphLineDash));
+        y -= textAligned;
+        x += textWidth + margin;
+        ctx.beginPath();           
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + textSize * 2, y);
+        ctx.stroke();
+        
+        if ((this.seriesOptions.defaultMarkerSize > 0) && 
+            objectExists(this.seriesOptions.markerColor)) {
+            _draw2DSegment_Marker(
+                ctx,
+                [x + textSize],
+                [y], 
+                1, 0, 1, 0);
+        }           
+    }
     
     /**
      * @brief 	Draw a line graph, one color, no markers.
@@ -91,13 +123,14 @@ class LineSeries {
     _draw2DSegment_Marker(ctx, xData, yData, xg, xo, yg, yo) {
         
         let len = xData.length < yData.length ? xData.length : yData.length;
-        let rad = this.seriesOptions.defaultMarkerSize / 2;
+        let rad = this.seriesOptions.defaultMarkerSize;
+        let rad2 = this.seriesOptions.defaultMarkerSize * 0.5;
         for (let ii = 0; ii < len; ii++) {
             let xp = xData[ii]*xg + xo;
             let yp = yData[ii]*yg + yo;
             
             // Just squares for now.
-            ctx.strokeRect(xp - rad, yp - rad, xp + rad, yp + rad);
+            ctx.strokeRect(xp - rad2, yp - rad2, rad, rad);
         }
     }
     

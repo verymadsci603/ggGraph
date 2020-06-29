@@ -814,7 +814,7 @@ class Graph {
             return;
         }
         
-        let margin = this.graphOptions.main.margin; 
+        let margin = objectExists(this.graphOptions.main.margin, 1);
         
         // Background.
         if (objectExists(opt.backgroundColor)) {
@@ -888,25 +888,13 @@ class Graph {
         let row = 0;
         let col = 0;
         let colSize = loc.w / maxCols;
-        let textAligned = textSize / 4;
+        let xAlign = (colSize - maxColWidth) * 0.5;
         for (let ii = 0; ii < items; ii++) {
-            let x = margin + loc.x + col * colSize;
-            x += (colSize - maxColWidth)/2;
-            let y = loc.y + offset + row * (textSize + vertical_margin);
-            let sopts = this.series[ii].seriesOptions;
-            ctx.fillText(this.series[ii].seriesOptions.name, x, y);
-            ctx.strokeStyle = sopts.defaultLineColor;
-            ctx.setLineDash(toCanvasDash(sopts.graphLineDash));
-            y -= textAligned;
-            x += widths[ii] + margin;
-            ctx.beginPath();           
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + textSize * 2, y);
-            ctx.stroke();
-            
-            // Draw the marker if it's there.
-            // sopts.markerColor .markerSizePx
-            
+            this.series[ii].draw_legend_item(
+                ctx, textSize, widths[ii], margin, 
+                margin + loc.x + col * colSize + xAlign, 
+                loc.y + offset + row * (textSize + vertical_margin));
+
             col += 1;
             if (col > maxCols) {
                 col = 0;
