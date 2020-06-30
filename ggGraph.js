@@ -207,14 +207,14 @@ class Graph {
         
         if (useMain) {
             mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxis.w, 
-                canvas_layout.xAxis.h, this.graphOptions.main.margin, this.graphOptions.xAxis);
+                canvas_layout.xAxis.h, this.graphOptions.main.marginPx, this.graphOptions.xAxis);
             my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxis.w, 
-                canvas_layout.yAxis.h, this.graphOptions.main.margin, this.graphOptions.yAxis);
+                canvas_layout.yAxis.h, this.graphOptions.main.marginPx, this.graphOptions.yAxis);
         } else {
             mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxisSum.w, 
-                canvas_layout.xAxisSum.h, this.graphOptions.main.margin, this.graphOptions.xAxis);
+                canvas_layout.xAxisSum.h, this.graphOptions.main.marginPx, this.graphOptions.xAxis);
             my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxisSum.w, 
-                canvas_layout.yAxisSum.h, this.graphOptions.main.margin, this.graphOptions.yAxis);
+                canvas_layout.yAxisSum.h, this.graphOptions.main.marginPx, this.graphOptions.yAxis);
         }
             
         return {
@@ -236,7 +236,7 @@ class Graph {
     _computeBox(ctx, box, opt, kind) {
         let isAxis = kind === 'axis';
         let isLegend = kind === 'legend';
-        let margin = objectExists(this.graphOptions.main.margin) ? this.graphOptions.main.margin : 4;
+        let margin = defaultObject(this.graphOptions.main.marginPx, 4);
         if ((this.graphOptions) && (opt) && (opt.show)) {
             // Either way, both need this.
             let textSize = defaultObject(opt.textSizePx, 11);
@@ -453,11 +453,11 @@ class Graph {
                 percent = percent < 1 ? 1 : (percent > 100 ? 100 : percent);
                 let alignment = defaultObject(this.graphOptions.main.xSummary.alignment, 'top');
                 let xSumHeight = box.h * percent / 100;
-                let minPixels = defaultObject(this.graphOptions.main.xSummary.sizeMinPixels, 0);
+                let minPixels = defaultObject(this.graphOptions.main.xSummary.minSizePx, 0);
                 xSumHeight = xSumHeight > minPixels ? xSumHeight : minPixels;
-                if (objectExists(this.graphOptions.main.xSummary.sizeMaxPixels)) {
-                    xSumHeight = xSumHeight < this.graphOptions.main.xSummary.sizeMaxPixels ? 
-                        xSumHeight : this.graphOptions.main.xSummary.sizeMaxPixels;
+                if (objectExists(this.graphOptions.main.xSummary.maxSizePx)) {
+                    xSumHeight = xSumHeight < this.graphOptions.main.xSummary.maxSizePx ? 
+                        xSumHeight : this.graphOptions.main.xSummary.maxSizePx;
                 }
                 [xSummary, box] = this._computeBox(
                     ctx, 
@@ -732,7 +732,7 @@ class Graph {
         ctx.strokeStyle = hasMarker ? opt.markerColor : '#000000';
         ctx.lineWidth = 2;
         ctx.fillStyle = opt.textColor;
-        let margin = objectExists(this.graphOptions.main.margin) ? this.graphOptions.main.margin : 4;
+        let margin = objectExists(this.graphOptions.main.marginPx) ? this.graphOptions.main.marginPx : 4;
         let mark = objectExists(opt.markerSizePx) ? opt.markerSizePx : 6;
         
         if (isHorizontal) {
@@ -814,7 +814,7 @@ class Graph {
             return;
         }
         
-        let margin = objectExists(this.graphOptions.main.margin, 1);
+        let margin = objectExists(this.graphOptions.main.marginPx, 1);
         
         // Background.
         if (objectExists(opt.backgroundColor)) {

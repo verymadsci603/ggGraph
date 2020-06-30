@@ -280,7 +280,7 @@ function make_graphOptions(
     boxEdgeColor,
     textColor,
     textSizePx,
-    margin,
+    marginPx,
     
     // Title options.
     titleOptions,
@@ -303,7 +303,7 @@ function make_graphOptions(
             boxEdgeColor: boxEdgeColor,
             textColor: textColor,
             textSizePx: textSizePx,
-            margin: margin,
+            marginPx: marginPx,
             zoom: {
                 kindsAllowed: 'auto x xy y', // What is allowed, space delminited.
                 currentMode: 'auto', // Kind of zoom starting with.
@@ -312,8 +312,8 @@ function make_graphOptions(
             xSummary: { 
                 behavior: 'onzoom', // or 'always' or 'none'
                 sizePercent: 25,    // 0 to 100%.
-                sizeMinPixels: 100, // Min pixels.
-                sizeMaxPixels: 400, // Max pixels.                
+                minSizePx: 100, // Min pixels.
+                maxSizePx: 400, // Max pixels.                
                 markerColor: '#808080',
                 alignment: 'top'} // 'top' or 'bottom'
         },
