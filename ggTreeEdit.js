@@ -7,36 +7,40 @@
  *
  */
 
+/**
+ * @brief   All registered object for changes.
+ */
+let ggTreeHive = {};
 
+/**
+ * @brief   JSON tree object editor.
+ */
 class ggTreeEdit {
     
     /**
      * @brief   Constructor.
      *
      * @param   obj     Takes an object.
+     * @param   id      ID to track this.
+     * @param   rules   Html rules.
      */
-    constructor(obj) {
+    constructor(obj, id, rules) {
+        this.id = id;
         this.names = [];
         this.obj = obj;
         this.html = '';
-        this.rules = [
-            { k: 'Color',       v: 'color'},    // End in color, edit as color.
-            { k: 'SizePx',      v: 'number'},   // Pixels as size.
-            { k: 'marginPx',    v: 'number'},   // Pixels as size.
-            { k: 'sizePercent', v: 'percent'},  // Percent
-            { k: 'textStr',     v: 'text'},     // Text
-            { k: '.show',       v: 'show'},     // Show hide.
-            { k: '.isLog',      v: 'bool'},     // isLog flag. 
-            { k: '.graphLineDash',  v: 'select:solid|dash|dashdot'},
-            { k: '.loc',            v: 'select:top|bottom|left|right'},
-            { k: '.alignment',      v: 'select:top|bottom'},
-            { k: '.behavior',       v: 'select:onzoom|always|none'},
-            { k: 'om.currentMode',  v: 'select:auto|x|xy|y'},
-            { k: '.kindsAllowed',   v: 'text'},
-            { k: '.graphType',      v: 'text'}
-        
-        ];
-        this._tree_create(obj, 0, undefined);
+        this.rules = rules;
+        this.changed_callback = undefined;
+        this._tree_create(obj, id, 0, undefined);
+        if ((id !== null) && (id !== undefined)) {
+            ggTreeHive[id] = this;
+        }
+    }
+    
+    remove() {
+        if (this.id in ggTreeHive) {
+            delete ggTreeHive[this.id];
+        }
     }
     
     /**
@@ -52,12 +56,13 @@ class ggTreeEdit {
      * @brief   Given an object tree, construct a '.' delimited list of sub-objects.
      *
      * @param   obj         Object to traverse.
+     * @param   id          Object id.
      * @param   count       Indention.
      * @param   prefix      Prefix to use in the name.
      *
      * @return  Array of strings.
      */
-    _tree_create(obj, count, prefix) {
+    _tree_create(obj, id, count, prefix) {
         if ((obj === undefined) || (obj === null)) {
             return;
         }
@@ -76,11 +81,15 @@ class ggTreeEdit {
                 this.html +='<div>';
             }       
             for (let ii = 0; ii < k.length; ii++) {
-                this._tree_create(obj[k[ii]], count + 1, count == 0 ? k[ii] : prefix + '.' + k[ii]);
+                this._tree_create(
+                    obj[k[ii]], 
+                    id, 
+                    count + 1, 
+                    count == 0 ? k[ii] : prefix + '.' + k[ii]);
             }
             this.html += '</div></div>';
         } else {
-            this.html += '<div style="margin-left: 18px;">' + prefix + ': ' + this._make_editor(prefix, obj) + '</div>';
+            this.html += '<div style="margin-left: 18px;">' + prefix + ': ' + this._make_editor(prefix, obj, id) + '</div>';
             this.names.push(prefix);
         }
     }
@@ -88,32 +97,41 @@ class ggTreeEdit {
     /**
      * @brief   Make an editor based on id matching rules.
      *
-     * @param   id      ID name (to match against rules).
-     * @param   value   The current value.
+     * @param   item_id     ID name (to match against rules).
+     * @param   value       The current value.
+     * @param   obj_id      The object ID.
      */
-    _make_editor(id, value) {
+    _make_editor(item_id, value, obj_id) {
+        let eventHandler = 'onchange=\"ggTree_itemEdited(\'' + obj_id + '\', \'' + item_id + '\', this); \"';
+        let eventHandler2 = '" ' + eventHandler + '>';;
         for (let ii = 0; ii < this.rules.length; ii++) {
-            if (id.endsWith(this.rules[ii].k)) {
-                let data = ''; //'data-id_path="' + id + '"';
+            if (item_id.endsWith(this.rules[ii].k)) {
                 if (this.rules[ii].v === 'color') {
+                    // Split value into color and transparency.
+                    // Value is #rrggbbaa where aa is optional opacity
+                    let clr = value.substring(0, 7);
+                    clr = clr !== '' ? clr : '#FFFFFF';
+                    let tra = parseInt(value.length > 7 ? value.substring(7) : 'FF', 16);
+                    
                     return '<input type="color" ' + 
                         'style="padding: 0px; border: 0px; background-color: transparent; vertical-align: middle;"' + 
-                        ' value="' +value + '">';
+                        ' value="' + clr + eventHandler2 + 
+                        '<input style="width: 80px; vertical-align:middle; outline:none;" type="range" min="0" max="255" value="' + tra + eventHandler2;
                 }
                 if (this.rules[ii].v === 'number') {
-                    return '<input type="number"  style="width:60px" value="' + value + '">';
+                    return '<input type="number"  style="width:60px" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'percent') {
-                    return '<input type="number"style="width:60px" min="0" max="100" value="' + value + '">';
+                    return '<input type="number"style="width:60px" min="0" max="100" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'text') {
-                    return '<input type="text" style="max-width: 120px" value="' +value + '">';
+                    return '<input type="text" style="max-width: 120px" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'show') {
-                    return '<select><option>Show</option><option>Hide</option></select>';
+                    return '<select class="gg_itemedit_showhide" ' + eventHandler + '><option>Show</option><option>Hide</option></select>';
                 }
                 if (this.rules[ii].v === 'bool') {
-                    return '<select><option>True</option><option>False</option></select>';
+                    return '<select class="gg_itemedit_bool" ' + eventHandler + '><option>True</option><option>False</option></select>';
                 }
                 if (this.rules[ii].v.startsWith('select:')) {
                     let options = this.rules[ii].v.substring(7).split('|');
@@ -121,7 +139,7 @@ class ggTreeEdit {
                     for (let ii = 0; ii < options.length; ii++) {
                         rv += '<option>' + options[ii] + '</option>';
                     }
-                    return '<select>' + rv + '</select>';
+                    return '<select ' + eventHandler + '>' + rv + '</select>';
                 }
             }
         }
@@ -144,7 +162,11 @@ class ggTreeEdit {
             // Last one? set it.
             let k_ii = keys[ii];
             if (ii === klast) {
+                let old_value = obj[k_ii];
                 obj[k_ii] = value;
+                if (this.changed_callback !== undefined) {
+                    this.changed_callback(this, key, old_value, value);
+                }
                 return;
             }
             
@@ -156,6 +178,15 @@ class ggTreeEdit {
                 obj[k_ii] = {};
             }
         }
+    }
+    
+    /**
+     * @brief   Set onchanged
+     *
+     * @param   func    Function, call signature: something(this, key, old_value, value);
+     */
+    onchange(func){
+        this.changed_callback = func;
     }
 
     /**
@@ -188,4 +219,55 @@ class ggTreeEdit {
     }
 }
 
+/**
+ * @brief   Called when an item is edited.
+ *
+ * @param   obj_id      Which object ID to lookup and change.
+ * @param   item_id     Which item in the object, by path.
+ * @param   that        HTML element firing the event.
+ */
+function ggTree_itemEdited(obj_id, item_id, that) {
+    if (!(obj_id in ggTreeHive)) {
+        // Old or not yet defined.
+        return;
+    }
+    
+    // Something to do...
+    
+    if (that.type === 'number') {
+        ggTreeHive[obj_id].set(item_id, that.valueAsNumber);
+        return;
+    }
 
+    // Things best w/ jquery ...
+    let $tht = $(that);
+    if ((that.type === 'color') || (that.type === 'range')) {
+        let $sib = $tht.siblings('input');
+        let tra = '';
+        let clr = '';
+        if (($sib.length > 0) && ($sib[0].type === 'range')) {
+           tra = $sib[0].valueAsNumber.toString(16).toUpperCase(); 
+           clr = that.value;
+        }
+        if (($sib.length > 0) && ($sib[0].type === 'color')) {
+           clr = $sib[0].value;           
+           tra = that.valueAsNumber.toString(16).toUpperCase(); 
+        }
+        console.log('old: ' + ggTreeHive[obj_id].get(item_id));
+        tra = (tra === 'FF') ? '' : tra;
+        ggTreeHive[obj_id].set(item_id, clr + tra);
+        console.log('composite: ' + (clr + tra));
+        console.log('new: ' + ggTreeHive[obj_id].get(item_id));
+        return;
+    }
+    
+    if ($tht.hasClass('gg_itemedit_showhide')) {            
+        ggTreeHive[obj_id].set(item_id, that.value === 'Show');
+        return;
+    }
+    if ($tht.hasClass('gg_itemedit_bool')) {            
+        ggTreeHive[obj_id].set(item_id, that.value === 'True');
+        return;
+    }
+    ggTreeHive[obj_id].set(item_id, that.value);
+}

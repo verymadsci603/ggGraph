@@ -81,19 +81,20 @@ class LineSeries {
      * @brief   Draw legend entry.
      *
      * @param   ctx         Draw context.
-     * @param   textWidth   Premeasured textWidth.
      * @param   textSize    Text size in pixels.
+     * @param   textWidth   Premeasured textWidth.
+     * @param   colWidth    Column width.
      * @param   margin      Space between things.
      * @param   x           X position.
      * @param   y           Y position.
      */
-    draw_legend_item(ctx, textSize, textWidth, margin, x, y) {
+    draw_legend_item(ctx, textSize, textWidth, colWidth, margin, x, y) {
         let textAligned = textSize / 4;
-        ctx.fillText(this.seriesOptions.name, x, y);
+        ctx.fillText(this.seriesOptions.name.trim(), x, y);
         ctx.strokeStyle = this.seriesOptions.defaultLineColor;
         ctx.setLineDash(toCanvasDash(this.seriesOptions.graphLineDash));
         y -= textAligned;
-        x += textWidth + margin;
+        x += colWidth - margin - textSize - textSize;
         ctx.beginPath();           
         ctx.moveTo(x, y);
         ctx.lineTo(x + textSize * 2, y);
@@ -218,7 +219,8 @@ class LineSeries {
 
         let x_str = 'x: ' + x_value;
         let y_str = 'y: ' + y_value;
-        let tw_n = objectExists(this.seriesOptions.name) ? ctx.measureText(this.seriesOptions.name).width : 0;
+        let seriesName = defaultObject(this.seriesOptions.name, '').trim();
+        let tw_n = ctx.measureText(seriesName).width;
         let tw_x = ctx.measureText(x_str).width;
         let tw_y = ctx.measureText(y_str).width;
         let tw = tw_x > tw_y ? 
@@ -249,7 +251,7 @@ class LineSeries {
         ctx.font = "11px verdana";        
         ctx.fillStyle = '#000000';        
         if (tw_n > 0) {            
-            ctx.fillText(this.seriesOptions.name, x_screen - tw/2, yoff + fontSize - 1);
+            ctx.fillText(seriesName, x_screen - tw/2, yoff + fontSize - 1);
             ctx.fillText(x_str, x_screen - tw/2, yoff + fontSize2 - 1);
             ctx.fillText(y_str, x_screen - tw/2, yoff + fontSize3 - 1);
         } else {            

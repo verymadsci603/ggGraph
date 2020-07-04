@@ -26,7 +26,7 @@ class Graph {
     constructor(id_or_guid, graphOptions) {
         if ((graphOptions === undefined) || (graphOptions === null)) {
                 
-            let titleLike = make_textBoxOptions(
+            let titleOpts = make_textBoxOptions(
                 true, 
                 'text',
                 '#FFFFFF',
@@ -35,7 +35,61 @@ class Graph {
                 1,
                 14,
                 'top');
-            let axisLike = make_axisOptions(
+            let bannerOpts = make_textBoxOptions(
+                true, 
+                'text',
+                '#FFFFFF',
+                '#404040',
+                '#000000',
+                1,
+                14,
+                'top');
+            let legendOpts = make_textBoxOptions(
+                true, 
+                'text',
+                '#FFFFFF',
+                '#404040',
+                '#000000',
+                1,
+                14,
+                'top');
+            let x_axisOpts = make_axisOptions(
+                true,
+                'axis',
+                false,
+                undefined,
+                '#202020',
+                '#808080',
+                'dash',
+                6,
+                '#000000',
+                11);
+                
+            let y_axisOpts = make_axisOptions(
+                true,
+                'axis',
+                false,
+                undefined,
+                '#202020',
+                '#808080',
+                'dash',
+                6,
+                '#000000',
+                11);
+                
+            let y2_axisOpts = make_axisOptions(
+                true,
+                'axis',
+                false,
+                undefined,
+                '#202020',
+                '#808080',
+                'dash',
+                6,
+                '#000000',
+                11);
+                
+            let z_axisOpts = make_axisOptions(
                 true,
                 'axis',
                 false,
@@ -53,8 +107,8 @@ class Graph {
                 '#000000',
                 11, // Text size.
                 4,  // Margin
-                titleLike, titleLike, titleLike,
-                axisLike, axisLike, undefined, axisLike);         
+                titleOpts, bannerOpts, legendOpts,
+                x_axisOpts, y_axisOpts, undefined, z_axisOpts);         
         }   
     
         this.guid = id_or_guid; // Unique HTML wide ID of this thing.
@@ -64,6 +118,7 @@ class Graph {
         this.maxBounds = undefined; // Max bounds for scrolling.
         this.lastLayout = {};
         this.lastXY = {x:0, y: 0};
+        this._legendCalcs = undefined;
         this.zoom = [];
         let $topEl = $(this.guid); 
 
@@ -236,7 +291,7 @@ class Graph {
     _computeBox(ctx, box, opt, kind) {
         let isAxis = kind === 'axis';
         let isLegend = kind === 'legend';
-        let margin = defaultObject(this.graphOptions.main.marginPx, 4);
+        let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         if ((this.graphOptions) && (opt) && (opt.show)) {
             // Either way, both need this.
             let textSize = defaultObject(opt.textSizePx, 11);
@@ -267,31 +322,37 @@ class Graph {
                 
                 // Calculate rows for legend, if it's a legend.
                 if (isLegend) {
-                    if (this.series.length > 1) {
-                        ctx.font = "" + textSize + "px Verdana";
-                        // Calculate largest width.
-                        let w = 0;
-                        let items = this.series.length;
-                        for (let ii = 0; ii < items; ii++) {
-                            let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
-                            w = w > wi ? w : wi;                        
-                        }
+                    let ws = [];
+                    let w = 0;
+                    ctx.font = "" + textSize + "px Verdana";  
+                    let items = this.series.length;
+                    for (let ii = 0; ii < items; ii++) {
+                        let seriesName = defaultObject(this.series[ii].seriesOptions.name, '').trim();
+                        let wi = ctx.measureText(seriesName).width;
+                        w = w > wi ? w : wi; 
+                        ws.push(wi);
+                    }
+                    w += (margin + textSize) * 2;
+                    let maxCols = 0;
+                    if (items > 1) {                  
+                        // name, margin symbology,
                         
-                        // Margin, name, margin symbology,
-                        w += 2 * margin + textSize * 2; // margin + symbology.
-                        let maxCols = Math.floor(box.w / w);
+                        maxCols = Math.floor(box.w / w);
                         maxCols = maxCols < 1 ? 1 : maxCols;
                         rows = Math.ceil(items / maxCols);
+                        
                     } else {
-                        rows = this.series.length;
-                    }
+                        rows = 1;
+                    }  
+                    maxCols = maxCols > items ? items : maxCols;
+                    this._legendCalcs = {r: rows, c: maxCols, w: ws, mc : w};                    
                 }
                 
                 // Add in any text label...
                 if (objectExists(opt.textStr) && (opt.textStr.length > 0)) {
                     rows += 1;
                 }
-                
+                                    
                 // Axis add on.
                 let h = margin + rows * (textSize + margin);
                 if (isAxis) {
@@ -333,14 +394,24 @@ class Graph {
                 // Legend.
                 if (isLegend) {
                     // Calculate largest width.
+                    let ws = [];
                     for (let ii = 0; ii < this.series.length; ii++) {
-                        let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
-                        tw = tw > wi ? tw : wi;                        
+                        let seriesName = defaultObject(this.series[ii].seriesOptions.name, '').trim();
+                        let wi = ctx.measureText(seriesName).width;
+                        tw = tw > wi ? tw : wi;   
+                        ws.push(tw);
                     }
+                    this._legendCalcs = {
+                        r: this.series.length, 
+                        c: 1, 
+                        w: ws, 
+                        mc : tw + (margin + textSize) * 2};      
                 }
                 // Text if it exists.
-                if (objectExists(opt.textStr) && objectExists(opt.textColor) && (opt.textSizePx > 0)) {
-                    let wi = ctx.measureText(opt.textColor).width;
+                if (objectExists(opt.textStr) && 
+                    objectExists(opt.textColor) && 
+                    (opt.textSizePx > 0)) {
+                    let wi = ctx.measureText(opt.textColor.trim()).width;
                     tw = tw > wi ? tw : wi; 
                 }
                 let w = margin + ((tw === 0) ? 0 : tw + margin);
@@ -351,7 +422,7 @@ class Graph {
                 }
                 
                 // Border.
-                w += (objectExists(opt.borderSizePx) ? parseInt(opt.borderSizePx) * 2 : 0) + margin;
+                w += margin + parseInt(defaultObject(opt.borderSizePx, 0));
                 
                 // Minimum check.
                 if (objectExists(opt.minSize)) {
@@ -493,6 +564,14 @@ class Graph {
         this._drawCanvas(this.lastBounds.x, this.lastBounds.y, true);
     }
     
+    /** 
+     * @brief   Update graph options.     
+     */
+    updateOptions(graphOptions) {
+        this.graphOptions = graphOptions;
+        this._drawCanvas(this.lastBounds.x, this.lastBounds.y, false);
+    }
+    
     /**
      * @brief   Draw the graph.
      *
@@ -600,8 +679,7 @@ class Graph {
                     // Draw the zoomed box.
                     // data to screen, so dividing by the data range, multiply by screen range.
                     // the box is defined by: axisInfo.xBounds.min .max
-                    ctx.strokeStyle = objectExists(this.graphOptions.main.xSummary.markerColor) ?
-                        this.graphOptions.main.xSummary.markerColor: '#808080';
+                    ctx.strokeStyle = defaultObject(this.graphOptions.main.xSummary.markerColor, '#808080');
                     let xg = canvas_layout.xSummary.w / (summaryAxisInfo.xBounds.max - summaryAxisInfo.xBounds.min);
                     let yg = canvas_layout.xSummary.h / (summaryAxisInfo.yBounds.max - summaryAxisInfo.yBounds.min);
                     let xo = -summaryAxisInfo.xBounds.min * xg + canvas_layout.xSummary.x;
@@ -617,8 +695,7 @@ class Graph {
                         dxr, dyr);
                             
                     // Do the zoom axis.
-                    ctx.strokeStyle = objectExists(this.graphOptions.xAxis.markerColor ) ? 
-                        this.graphOptions.xAxis.markerColor : '#000000';
+                    ctx.strokeStyle = defaultObject(this.graphOptions.xAxis.markerColor, '#000000');
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.moveTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y);
@@ -671,7 +748,7 @@ class Graph {
         ctx.beginPath();
         let clr = opts.graphlineColor;
         clr = (clr === undefined) || (clr === null) ? '#000000' : clr;
-        ctx.strokeStyle = clr
+        ctx.strokeStyle = clr;
         ctx.setLineDash(toCanvasDash(opts.graphLineDash));
         
         if (isHorizontal) {
@@ -732,7 +809,7 @@ class Graph {
         ctx.strokeStyle = hasMarker ? opt.markerColor : '#000000';
         ctx.lineWidth = 2;
         ctx.fillStyle = opt.textColor;
-        let margin = objectExists(this.graphOptions.main.marginPx) ? this.graphOptions.main.marginPx : 4;
+        let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         let mark = objectExists(opt.markerSizePx) ? opt.markerSizePx : 6;
         
         if (isHorizontal) {
@@ -741,7 +818,7 @@ class Graph {
             let txt_max = txt_min + 1;
             if (hasText && (loc.h <= mark + margin + margin + opt.textStr * 2)) {
                 if (objectExists(opt.textStr) && opt.textStr.length > 0) {
-                    let titleWidth = ctx.measureText(opt.textStr).width;
+                    let titleWidth = ctx.measureText(opt.textStr.trim()).width;
                     txt_min = loc.x + (loc.w - titleWidth)/2 - margin;
                     txt_max = txt_min + titleWidth + margin;
                 }
@@ -753,7 +830,7 @@ class Graph {
                 ctx.lineTo(loc.x + loc.w, loc.y);
             }
             
-            let textY = loc.y + mark + margin + opt.textSizePx;  
+            let textY = loc.y + mark + margin + (opt.textSizePx *0.5);  
             // Marks and or Text.
             let min_x = loc.x;
             let max_x = loc.x + loc.w;
@@ -814,7 +891,7 @@ class Graph {
             return;
         }
         
-        let margin = objectExists(this.graphOptions.main.marginPx, 1);
+        let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         
         // Background.
         if (objectExists(opt.backgroundColor)) {
@@ -835,30 +912,15 @@ class Graph {
         // Compute the rows.
         let textSize = defaultObject(opt.textSizePx, 11);
         let items = this.series.length;
-        let rows = items;
-        let widths = [];
-        let maxCols = 1;
-        let maxColWidth = 0;
-        if (items > 1) {
-            let w = 0;
-            for (let ii = 0; ii < items; ii++) {
-                let wi = ctx.measureText(this.series[ii].seriesOptions.name).width;
-                widths.push(wi);
-                w = w > wi ? w : wi;                        
-            }
-                        
-            // Margin, name, margin symbology,
-            w += 2 * margin + textSize * 2; // margin + symbology.
-            maxColWidth = w;
-            maxCols = Math.floor(loc.w / w);
-            maxCols = maxCols < 1 ? 1 : maxCols;
-            maxCols = maxCols < items ? maxCols : items;
-            rows = Math.ceil(items / maxCols);
-        } 
+        let rows = this._legendCalcs.r;
+        let widths = this._legendCalcs.w
+        let maxCols = this._legendCalcs.c;
+        let maxColWidth = this._legendCalcs.mc;
+
         let hasText = objectExists(opt.textStr) && (opt.textStr.length > 0);
         if (hasText) {
             rows += 1
-            let w = ctx.measureText(opt.textStr).width;
+            let w = ctx.measureText(opt.textStr.trim()).width;
             widths.push(w);
         }
         
@@ -872,14 +934,13 @@ class Graph {
             vertical_margin = vertical_margin < 1 ? 1 : vertical_margin; 
             idealHeight = (vertical_margin + textSize) * rows + vertical_margin;            
         }
-        offset = (loc.h - idealHeight)/2;
-        offset += textSize;
+        offset = 0.5 * (loc.h - idealHeight) + textSize - 1;
         
         // Draw the title text if it exists.
         ctx.fillStyle = defaultObject(opt.textColor, '#000000');
         if (hasText) {
             ctx.fillText(
-                opt.textStr, 
+                opt.textStr.trim(), 
                 loc.x + (loc.w - widths[widths.length-1]) / 2, 
                 loc.y + offset); 
             offset += textSize + vertical_margin;
@@ -891,12 +952,12 @@ class Graph {
         let xAlign = (colSize - maxColWidth) * 0.5;
         for (let ii = 0; ii < items; ii++) {
             this.series[ii].draw_legend_item(
-                ctx, textSize, widths[ii], margin, 
+                ctx, textSize, widths[ii], maxColWidth, margin, 
                 margin + loc.x + col * colSize + xAlign, 
                 loc.y + offset + row * (textSize + vertical_margin));
 
             col += 1;
-            if (col > maxCols) {
+            if (col >= maxCols) {
                 col = 0;
                 row += 1;
             }
@@ -920,7 +981,7 @@ class Graph {
         }
         if (objectExists(opt.boxEdgeColor) && (opt.borderSizePx > 0)) {
             ctx.strokeStyle = opt.boxEdgeColor;
-            ctx.lineWidth = opt.borderSizePx;
+            ctx.lineWidth = defaultObject(opt.borderSizePx, 1);
             ctx.strokeRect(loc.x, loc.y, loc.w, loc.h);
         }
         if (objectExists(opt.textStr) && objectExists(opt.textColor) && (opt.textSizePx > 0)) {
@@ -1338,7 +1399,6 @@ function _setup($graphs) {
             ggGraph_Graphs[$g[0].id] = new Graph($g[0].id);
         }
     }
-    
 }
 
 /**
@@ -1352,13 +1412,12 @@ function _resize(item) {
 }
 
 /**
- * Find all ggGraphs and set them up.
+ * @brief   Find all ggGraphs and set them up.
  */
 function _init() {		
     _setup($('.ggGraph_line'));
     _setup($('.ggGraph_scatter'));
     setInterval(function () {
-        
         $('.ggGraph_line').each(function () { _resize(this);});
         $('.ggGraph_scatter').each(function () { _resize(this);});
     }, 250);

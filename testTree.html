@@ -9,14 +9,33 @@
 <script src="ggGraph.js"></script>
 <script src="ggTreeEdit.js"></script>
 <script> 
-	window.addEventListener('DOMContentLoaded', (event) => {
+    window.addEventListener('DOMContentLoaded', (event) => {
 	
 		ggGraph.initialize();
 		ggGraph.setupTestData();
 		ggGraph.setupTestLineGraph('testLineGraph');
         let g = ggGraph.getGraph('testLineGraph');
 		g.draw();
-        let t = new ggTreeEdit(g.graphOptions);
+        let t = new ggTreeEdit(
+            g.graphOptions, 
+            'testId',  
+            [   { k: 'Color',       v: 'color'},    // End in color, edit as color.
+                { k: 'SizePx',      v: 'number'},   // Pixels as size.
+                { k: 'marginPx',    v: 'number'},   // Pixels as size.
+                { k: 'sizePercent', v: 'percent'},  // Percent
+                { k: 'textStr',     v: 'text'},     // Text
+                { k: '.show',       v: 'show'},     // Show hide.
+                { k: '.isLog',      v: 'bool'},     // isLog flag. 
+                { k: '.graphLineDash',  v: 'select:solid|dash|dashdot'},
+                { k: '.loc',            v: 'select:top|bottom|left|right'},
+                { k: '.alignment',      v: 'select:top|bottom'},
+                { k: '.behavior',       v: 'select:onzoom|always|none'},
+                { k: 'om.currentMode',  v: 'select:auto|x|xy|y'},
+                { k: '.kindsAllowed',   v: 'text'},
+                { k: '.graphType',      v: 'text'}]);
+        t.onchange(function t_changed(treeEdit, key, old_value, value) {
+            g.updateOptions(treeEdit.obj);
+        });
         $('#testbind').html(t.html);       
 	});
 </script>

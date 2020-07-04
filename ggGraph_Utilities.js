@@ -135,13 +135,17 @@ function drawCenteredText(ctx, color, fontName, textSizePx, layout, textStr) {
     if (!objectExists(layout)) {
         return;
     }
+    if ((textStr === undefined) || (textStr === null)) {
+        return;
+    }
+    textStr = textStr.trim();
     let tw = ctx.measureText(textStr).width;
     ctx.fillStyle = color;
     ctx.font = "" + textSizePx + "px " + fontName;
     ctx.fillText(
         textStr, 
         layout.x + (layout.w - tw) / 2, 
-        layout.y + (layout.h + textSizePx) / 2);  
+        layout.y + (layout.h + textSizePx) / 2 - 1);  
 }  
 
 /**
@@ -158,6 +162,10 @@ function drawCenteredFloorText(ctx, color, fontName, textSizePx, layout, textStr
     if (!objectExists(layout)) {
         return;
     }
+    if ((textStr === undefined) || (textStr === null)) {
+        return;
+    }
+    textStr = textStr.trim();
     let tw = ctx.measureText(textStr).width;
     ctx.fillStyle = color;
     ctx.font = "" + textStr + "px " + fontName;
