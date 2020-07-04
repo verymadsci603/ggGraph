@@ -572,6 +572,13 @@ class Graph {
         this._drawCanvas(this.lastBounds.x, this.lastBounds.y, false);
     }
     
+    /** 
+     * @brief   Update graph options.     
+     */
+    redraw() {
+        this._drawCanvas(this.lastBounds.x, this.lastBounds.y, false);
+    }
+    
     /**
      * @brief   Draw the graph.
      *

@@ -9,36 +9,67 @@
 <script src="ggGraph.js"></script>
 <script src="ggTreeEdit.js"></script>
 <script> 
+    let loadedOnce = false;
     window.addEventListener('DOMContentLoaded', (event) => {
-	
+        if (loadedOnce) {
+            return;
+        }
+        loadedOnce = true;
+        
 		ggGraph.initialize();
 		ggGraph.setupTestData();
 		ggGraph.setupTestLineGraph('testLineGraph');
         let g = ggGraph.getGraph('testLineGraph');
 		g.draw();
-        let t = new ggTreeEdit(
-            g.graphOptions, 
-            'testId',  
-            [   { k: 'Color',       v: 'color'},    // End in color, edit as color.
-                { k: 'SizePx',      v: 'number'},   // Pixels as size.
-                { k: 'marginPx',    v: 'number'},   // Pixels as size.
-                { k: 'sizePercent', v: 'percent'},  // Percent
-                { k: 'textStr',     v: 'text'},     // Text
-                { k: '.show',       v: 'show'},     // Show hide.
-                { k: '.isLog',      v: 'bool'},     // isLog flag. 
-                { k: '.graphLineDash',  v: 'select:solid|dash|dashdot'},
-                { k: '.loc',            v: 'select:top|bottom|left|right'},
-                { k: '.alignment',      v: 'select:top|bottom'},
-                { k: '.behavior',       v: 'select:onzoom|always|none'},
-                { k: 'om.currentMode',  v: 'select:auto|x|xy|y'},
-                { k: '.kindsAllowed',   v: 'text'},
-                { k: '.graphType',      v: 'text'}]);
+        let rules = [ 
+            { k: 'Color',       v: 'color'},    // End in color, edit as color.
+            { k: 'SizePx',      v: 'number'},   // Pixels as size.
+            { k: 'marginPx',    v: 'number'},   // Pixels as size.
+            { k: 'sizePercent', v: 'percent'},  // Percent
+            { k: 'textStr',     v: 'text'},     // Text
+            { k: '.show',       v: 'show'},     // Show hide.
+            { k: '.isLog',      v: 'bool'},     // isLog flag. 
+            { k: '.graphLineDash',  v: 'select:solid|dash|dashdot'},
+            { k: '.loc',            v: 'select:top|bottom|left|right'},
+            { k: '.alignment',      v: 'select:top|bottom'},
+            { k: '.behavior',       v: 'select:onzoom|always|none'},
+            { k: 'om.currentMode',  v: 'select:auto|x|xy|y'},
+            { k: 'defaultMarkerShape', v: 'select:none|square'},
+            { k: 'defaultMarkerSize',  v: 'number'},
+            { k: 'xAxisIndex',      v: 'noshow'},
+            { k: 'yAxisIndex',      v: 'noshow'},
+            { k: '.kindsAllowed',   v: 'text'},
+            { k: '.graphType',      v: 'text'}];
+            
+        // Graph options.
+        let t = new ggTreeEdit(g.graphOptions, 'testId', rules);
         t.onchange(function t_changed(treeEdit, key, old_value, value) {
             g.updateOptions(treeEdit.obj);
             $('#graphJson').html(JSON.stringify(treeEdit.obj, undefined, 2));
         });
         $('#graphOptions').html(t.html); 
         $('#graphJson').html(JSON.stringify(g.graphOptions, undefined, 2));
+        
+        // Series options.
+        let s_o = '';
+        let s_j = '';
+        for (let ii = 0; ii < g.series.length; ii++) {
+            let opts = g.series[ii].seriesOptions;
+            let s = new ggTreeEdit(opts, 'series_' +  ii, rules);
+            s_o += s.html + '<br>';
+            s_j += JSON.stringify(g.series[ii].seriesOptions, undefined, 2) + '<br><br>';
+            s.onchange(function t_changed(treeEdit, key, old_value, value) {
+                s.seriesOptions = treeEdit.obj;
+                let s_k = '';
+                for (let jj = 0; jj < g.series.length; jj++) {
+                    s_k += JSON.stringify(g.series[jj].seriesOptions, undefined, 2);
+                }
+                $('#seriesJson').html(s_k);
+                g.redraw();
+            });
+        }
+        $('#seriesOptions').html(s_o); 
+        $('#seriesJson').html(s_j);
 	});
     
     function doTab(that, targetId) {
@@ -53,6 +84,7 @@
         $otherBtn.removeClass('selectedTab');
     }
 </script>
+
 <style>
 div.tabHeader {
     margin: 0;
@@ -86,10 +118,14 @@ div.tabPage {
     <div class='tabHeader'>
         <button class='selectedTab' onclick="doTab(this, '#graphOptions');"
         >Graph Options</button><button onclick="doTab(this, '#graphJson');"
-        >Graph Json</button><div style="display: inline-block; width: calc(100% - 220px); border:solid black; border-width: 0 0 1px 0;">&nbsp;</div>
+        >Graph Json</button><button onclick="doTab(this, '#seriesOptions');"
+        >Series Options</button><button onclick="doTab(this, '#seriesJson');"
+        >Series Json</button><div style="display: inline-block; width: calc(100% - 440px); border:solid black; border-width: 0 0 1px 0;">&nbsp;</div>
     </div>
     <div class='tabPage' id='graphOptions' style='font-size: 11px; width: 100%; height: calc(100% - 22px); overflow-y: scroll;'></div>
     <div class='tabPage' id='graphJson' style='display: none; font-size: 11px; width: 100%; height: calc(100% - 22px); overflow-y: scroll;'></div>
+    <div class='tabPage' id='seriesOptions' style='display: none; font-size: 11px; width: 100%; height: calc(100% - 22px); overflow-y: scroll;'></div>
+    <div class='tabPage' id='seriesJson' style='display: none; font-size: 11px; width: 100%; height: calc(100% - 22px); overflow-y: scroll;'></div>
 </td>
 </tr></table>
 

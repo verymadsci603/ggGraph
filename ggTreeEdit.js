@@ -97,9 +97,41 @@ class ggTreeEdit {
             }
             this.html += '</div></div>';
         } else {
-            this.html += '<div style="margin-left: 22px;">' + prefix + ': ' + this._make_editor(prefix, obj, id) + '</div>';
+            // Get the editor, if it's none, then it was a noshow so skip it, else append it.
+            let editor = this._make_editor(prefix, obj, id);
+            if (editor !== '') {
+                this.html += '<div style="margin-left: 22px;">' + this.prettyPrintPrefix(prefix) + ': ' + this._make_editor(prefix, obj, id) + '</div>';
+            }
             this.names.push(prefix);
         }
+    }
+    
+    /**
+     * @brief   Fixup a prefix for a friendly thing at an editor.
+     *
+     * @param   prefix  The object prefix string like foo.bar.someOtherString
+     *
+     * @return  Nicer looking text such as "Some other string" from foo.bar.someOtherString.
+     */
+    prettyPrintPrefix(prefix) {
+        let period = prefix.lastIndexOf('.');
+        prefix = period < 0 ? prefix : prefix.substring(period + 1);
+        let output = '';
+        let upper = prefix.toUpperCase();
+        let lower = prefix.toLowerCase();
+        for (let ii = 0; ii < prefix.length; ii++) {
+            let p_ii = prefix[ii];
+            if (ii === 0) {
+                // Capitalize.
+                output += upper[ii];
+                continue;
+            }
+            if (p_ii < 'a') {
+                output += ' ';                
+            } 
+            output += lower[ii];  
+        }
+        return output;
     }
     
     /**
@@ -114,7 +146,14 @@ class ggTreeEdit {
         let eventHandler2 = '" ' + eventHandler + '>';;
         for (let ii = 0; ii < this.rules.length; ii++) {
             if (item_id.endsWith(this.rules[ii].k)) {
+                if (this.rules[ii].v === 'noshow') {
+                    return '';
+                }
                 if (this.rules[ii].v === 'color') {
+                    if (value === 'none') {
+                        // Pure transparent white.
+                        value = '#FFFFFF00';
+                    }
                     // Split value into color and transparency.
                     // Value is #rrggbbaa where aa is optional opacity
                     let clr = value.substring(0, 7);
