@@ -37,6 +37,9 @@ class ggTreeEdit {
         }
     }
     
+    /** 
+     * @brief   Remove from the tree.
+     */
     remove() {
         if (this.id in ggTreeHive) {
             delete ggTreeHive[this.id];
@@ -74,9 +77,14 @@ class ggTreeEdit {
             '$(this).siblings(\'div\').css(\'display\', isplus? \'none\': \'block\');\n' +
             'this.textContent = isplus ? \'-\' : \'+\';\"';
         if (obj.constructor === Object) {
-            if (count != 0) {
-                this.html += '<div style="margin-left: 18px;"><div>' + 
-                    '<button style="padding:0; margin: 0 4px 0 0; width:18px; height:18px" ' + onclickstr + '>+</button>' + prefix;
+            if (count !== 0) {
+                if (count === 1) {
+                    this.html += '<div><div>' + 
+                        '<button style="padding:0; margin: 0 4px 0 0; width:18px; height:18px" ' + onclickstr + '>+</button>' + prefix;
+                } else {
+                    this.html += '<div style="margin-left: 18px;"><div>' + 
+                        '<button style="padding:0; margin: 0 4px 0 0; width:18px; height:18px" ' + onclickstr + '>+</button>' + prefix;
+                }
             } else {
                 this.html +='<div>';
             }       
