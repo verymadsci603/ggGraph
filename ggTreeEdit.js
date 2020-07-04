@@ -76,7 +76,7 @@ class ggTreeEdit {
         if (obj.constructor === Object) {
             if (count != 0) {
                 this.html += '<div style="margin-left: 18px;"><div>' + 
-                    '<button style="padding:0px; width:18px; height:18px" ' + onclickstr + '>+</button>' + prefix;
+                    '<button style="padding:0; margin: 0 4px 0 0; width:18px; height:18px" ' + onclickstr + '>+</button>' + prefix;
             } else {
                 this.html +='<div>';
             }       
@@ -89,7 +89,7 @@ class ggTreeEdit {
             }
             this.html += '</div></div>';
         } else {
-            this.html += '<div style="margin-left: 18px;">' + prefix + ': ' + this._make_editor(prefix, obj, id) + '</div>';
+            this.html += '<div style="margin-left: 22px;">' + prefix + ': ' + this._make_editor(prefix, obj, id) + '</div>';
             this.names.push(prefix);
         }
     }
@@ -253,11 +253,8 @@ function ggTree_itemEdited(obj_id, item_id, that) {
            clr = $sib[0].value;           
            tra = that.valueAsNumber.toString(16).toUpperCase(); 
         }
-        console.log('old: ' + ggTreeHive[obj_id].get(item_id));
         tra = (tra === 'FF') ? '' : tra;
         ggTreeHive[obj_id].set(item_id, clr + tra);
-        console.log('composite: ' + (clr + tra));
-        console.log('new: ' + ggTreeHive[obj_id].get(item_id));
         return;
     }
     
