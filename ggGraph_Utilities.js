@@ -87,17 +87,20 @@ function inBox(x, y, box) {
 }
                         
 /**
- * @brief   Turn 'solid', 'dash' or 'dashdot' or array for canvas.setLineDash
+ * @brief   Turn 'solid', 'dash' or 'dashdot', etc. or array for canvas.setLineDash
  * 
  * @param   dashOption
  *
- * @return  Array.
+ * @return  Array. 
  */
 function toCanvasDash(dashOption) {
     dashOption = objectExists(dashOption) ? dashOption : 'solid';
-    if (dashOption == 'solid') return [];
-    if (dashOption == 'dash') return [10, 10];
-    if (dashOption == 'dashdot') return [10, 10, 2, 10];
+    if (dashOption === 'solid') return [];
+    if (dashOption === 'dash') return [10, 10];
+    if (dashOption === 'dot') return [2, 10];
+    if (dashOption === 'dashdot') return [10, 10, 2, 10];
+    if (dashOption === 'dashdashdot') return [10, 10, 10, 10, 2, 10];
+    if (dashOption === 'dashdashdotdot') return [10, 10, 10, 10, 2, 10, 2, 10];
     return dashOption;
 }
 

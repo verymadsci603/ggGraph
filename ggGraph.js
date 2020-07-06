@@ -640,103 +640,112 @@ class Graph {
             // Do once, for pan max bounds.
             this.maxBounds = {'x': { min: axisInfo.xBounds.min, max: axisInfo.xBounds.max}, 'y': { min: axisInfo.yBounds.min, max: axisInfo.yBounds.max}, 'y2': null, 'z': null, 'w': cw, 'h': ch};
         }
-        if (this.graphOptions) {
-            if (this.graphOptions.main.graphType === '2D') {
-                
-                // Paint the series.
-                ctx.fillStyle = this.graphOptions.main.backgroundColor;
-                ctx.clearRect(0, 0, cw, ch);
-                ctx.fillRect(0, 0, cw, ch);
-                
-                let xmarks  = objectExists(axisInfo.xBounds)  ? axisInfo.xBounds.marks  : undefined;
-                let ymarks  = objectExists(axisInfo.yBounds)  ? axisInfo.yBounds.marks  : undefined;
-                let ymarks2 = objectExists(axisInfo.yBounds2) ? axisInfo.yBounds2.marks : undefined;
-                
-                this.drawGrid(ctx, true,  canvas_layout.graph, xmarks,  this.graphOptions.xAxis);
-                this.drawGrid(ctx, false, canvas_layout.graph, ymarks,  this.graphOptions.yAxis);
-                this.drawGrid(ctx, false, canvas_layout.graph, ymarks2, this.graphOptions.yAxis2);
-                
-                for (let ii = 0; ii < this.series.length; ii++) {
-                    this.series[ii].draw2D(ctx, axisInfo, canvas_layout.graph);
-                }
-                
-                // Clear out around the graph.
-                let right = canvas_layout.graph.x + canvas_layout.graph.w;
-                let bot = canvas_layout.graph.y + canvas_layout.graph.h;
-                ctx.clearRect(0, 0, canvas_layout.graph.x, ch);     // Left.
-                ctx.clearRect(right, 0, cw - right, ch);            // Right.
-                ctx.clearRect(0, 0, cw, canvas_layout.graph.y);     // Top.
-                ctx.clearRect(0, bot, cw, ch - bot);                // Bottom.
-                
-                if (canvas_layout.xSummary !== undefined) {
-                    
-                    let xmarksS  = objectExists(summaryAxisInfo.xBounds)  ? summaryAxisInfo.xBounds.marks  : undefined;
-                    let ymarksS  = objectExists(summaryAxisInfo.yBounds)  ? summaryAxisInfo.yBounds.marks  : undefined;
-                    
-                    this.drawGrid(ctx, true,  canvas_layout.xSummary, xmarksS,  this.graphOptions.xAxis);
-                    this.drawGrid(ctx, false, canvas_layout.xSummary, ymarksS,  this.graphOptions.yAxis);
-                    
-                    for (let ii = 0; ii < this.series.length; ii++) {
-                        this.series[ii].draw2D(
-                            ctx, 
-                            summaryAxisInfo, 
-                            canvas_layout.xSummary);
-                    }
-                    
-                    // Draw the zoomed box.
-                    // data to screen, so dividing by the data range, multiply by screen range.
-                    // the box is defined by: axisInfo.xBounds.min .max
-                    ctx.strokeStyle = defaultObject(this.graphOptions.main.xSummary.markerColor, '#808080');
-                    let xg = canvas_layout.xSummary.w / (summaryAxisInfo.xBounds.max - summaryAxisInfo.xBounds.min);
-                    let yg = canvas_layout.xSummary.h / (summaryAxisInfo.yBounds.max - summaryAxisInfo.yBounds.min);
-                    let xo = -summaryAxisInfo.xBounds.min * xg + canvas_layout.xSummary.x;
-                    let yo = -summaryAxisInfo.yBounds.min * yg + canvas_layout.xSummary.y; 
-                    let dxr = (axisInfo.xBounds.max - axisInfo.xBounds.min) * xg;
-                    let dyr = (axisInfo.yBounds.max - axisInfo.yBounds.min) * yg;
-                    ctx.lineWidth = 2;
-                    dxr = dxr < 8 ? 8 : dxr;
-                    dyr = dyr < 8 ? 8 : dyr;
-                    ctx.strokeRect(
-                        axisInfo.xBounds.min * xg + xo, 
-                        axisInfo.yBounds.min * yg + yo, 
-                        dxr, dyr);
-                            
-                    // Do the zoom axis.
-                    ctx.strokeStyle = defaultObject(this.graphOptions.xAxis.markerColor, '#000000');
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y);
-                    ctx.lineTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y + canvas_layout.xSummary.h);
-                    ctx.lineTo(canvas_layout.xSummary.x + canvas_layout.xSummary.w, 
-                               canvas_layout.xSummary.y + canvas_layout.xSummary.h);
-                    ctx.stroke();
-                    
-                    // Draw the two summary axises.
-                    this.drawAxis(ctx, true,  this.graphOptions.xAxis, canvas_layout.xAxisSum, xmarksS, true);
-                    this.drawAxis(ctx, false, this.graphOptions.yAxis, canvas_layout.yAxisSum, ymarksS, true);
-                
-                }          
-                                               
-                // Fill behind the axises.
-                ctx.fillStyle = this.graphOptions.main.backgroundColor;
-                let axiss = [canvas_layout.xAxis, canvas_layout.yAxis, canvas_layout.xAxis];
-                for (let ii = 0; ii < 3; ii++) {
-                    if (objectExists(axiss[ii])) {
-                        ctx.fillRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
-                    }
-                }
-
-                // Paint the axis.
-                this.drawAxis(ctx, true,  this.graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
-                this.drawAxis(ctx, false, this.graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
-                this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
-                
-                // Paint the legend, title, banner.
-                this.drawLegend(ctx, this.graphOptions.legend, canvas_layout.legend);
-                this.drawTextOption(ctx, this.graphOptions.title,  canvas_layout.title);
-                this.drawTextOption(ctx, this.graphOptions.banner, canvas_layout.banner);
-            }
+        if (!objectExists(this.graphOptions)) {
+            return; 
         }
+        if (this.graphOptions.main.graphType === '2D') {
+            
+            // Paint the series.
+            ctx.fillStyle = this.graphOptions.main.backgroundColor;
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.fillRect(0, 0, cw, ch);
+            
+            let xmarks  = objectExists(axisInfo.xBounds)  ? axisInfo.xBounds.marks  : undefined;
+            let ymarks  = objectExists(axisInfo.yBounds)  ? axisInfo.yBounds.marks  : undefined;
+            let ymarks2 = objectExists(axisInfo.yBounds2) ? axisInfo.yBounds2.marks : undefined;
+            
+            ctx.save();
+            this.drawGrid(ctx, true,  canvas_layout.graph, xmarks,  this.graphOptions.xAxis);
+            this.drawGrid(ctx, false, canvas_layout.graph, ymarks,  this.graphOptions.yAxis);
+            this.drawGrid(ctx, false, canvas_layout.graph, ymarks2, this.graphOptions.yAxis2);
+            ctx.restore();
+            
+            ctx.save();
+            for (let ii = 0; ii < this.series.length; ii++) {
+                this.series[ii].draw2D(ctx, axisInfo, canvas_layout.graph);                    
+            }
+            ctx.restore();
+            
+            // Clear out around the graph.
+            let right = canvas_layout.graph.x + canvas_layout.graph.w;
+            let bot = canvas_layout.graph.y + canvas_layout.graph.h;
+            ctx.clearRect(0, 0, canvas_layout.graph.x, ch);     // Left.
+            ctx.clearRect(right, 0, cw - right, ch);            // Right.
+            ctx.clearRect(0, 0, cw, canvas_layout.graph.y);     // Top.
+            ctx.clearRect(0, bot, cw, ch - bot);                // Bottom.
+            
+            if (canvas_layout.xSummary !== undefined) {
+                
+                let xmarksS  = objectExists(summaryAxisInfo.xBounds)  ? summaryAxisInfo.xBounds.marks  : undefined;
+                let ymarksS  = objectExists(summaryAxisInfo.yBounds)  ? summaryAxisInfo.yBounds.marks  : undefined;
+                
+                ctx.save();
+                this.drawGrid(ctx, true,  canvas_layout.xSummary, xmarksS,  this.graphOptions.xAxis);
+                this.drawGrid(ctx, false, canvas_layout.xSummary, ymarksS,  this.graphOptions.yAxis);
+                ctx.restore();
+
+                ctx.save();
+                for (let ii = 0; ii < this.series.length; ii++) {
+                    this.series[ii].draw2D(
+                        ctx, 
+                        summaryAxisInfo, 
+                        canvas_layout.xSummary);
+                }
+                ctx.restore();
+                
+                // Draw the zoomed box.
+                // data to screen, so dividing by the data range, multiply by screen range.
+                // the box is defined by: axisInfo.xBounds.min .max
+                ctx.strokeStyle = defaultObject(this.graphOptions.main.xSummary.markerColor, '#808080');
+                let xg = canvas_layout.xSummary.w / (summaryAxisInfo.xBounds.max - summaryAxisInfo.xBounds.min);
+                let yg = canvas_layout.xSummary.h / (summaryAxisInfo.yBounds.max - summaryAxisInfo.yBounds.min);
+                let xo = -summaryAxisInfo.xBounds.min * xg + canvas_layout.xSummary.x;
+                let yo = -summaryAxisInfo.yBounds.min * yg + canvas_layout.xSummary.y; 
+                let dxr = (axisInfo.xBounds.max - axisInfo.xBounds.min) * xg;
+                let dyr = (axisInfo.yBounds.max - axisInfo.yBounds.min) * yg;
+                ctx.lineWidth = 2;
+                dxr = dxr < 8 ? 8 : dxr;
+                dyr = dyr < 8 ? 8 : dyr;
+                ctx.strokeRect(
+                    axisInfo.xBounds.min * xg + xo, 
+                    axisInfo.yBounds.min * yg + yo, 
+                    dxr, dyr);
+                        
+                // Do the zoom axis.
+                ctx.strokeStyle = defaultObject(this.graphOptions.xAxis.markerColor, '#000000');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y);
+                ctx.lineTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y + canvas_layout.xSummary.h);
+                ctx.lineTo(canvas_layout.xSummary.x + canvas_layout.xSummary.w, 
+                           canvas_layout.xSummary.y + canvas_layout.xSummary.h);
+                ctx.stroke();
+                
+                // Draw the two summary axises.
+                this.drawAxis(ctx, true,  this.graphOptions.xAxis, canvas_layout.xAxisSum, xmarksS, true);
+                this.drawAxis(ctx, false, this.graphOptions.yAxis, canvas_layout.yAxisSum, ymarksS, true);
+            
+            }          
+                                           
+            // Fill behind the axises.
+            ctx.fillStyle = this.graphOptions.main.backgroundColor;
+            let axiss = [canvas_layout.xAxis, canvas_layout.yAxis, canvas_layout.xAxis];
+            for (let ii = 0; ii < 3; ii++) {
+                if (objectExists(axiss[ii])) {
+                    ctx.fillRect(0, axiss[ii].y, axiss[ii].w, axiss[ii].h);
+                }
+            }
+
+            // Paint the axis.            
+            this.drawAxis(ctx, true,  this.graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
+            this.drawAxis(ctx, false, this.graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
+            this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
+            
+            // Paint the legend, title, banner.
+            this.drawLegend(ctx, this.graphOptions.legend, canvas_layout.legend);
+            this.drawTextOption(ctx, this.graphOptions.title,  canvas_layout.title);
+            this.drawTextOption(ctx, this.graphOptions.banner, canvas_layout.banner);
+        }        
     }
     
     /**
@@ -789,6 +798,7 @@ class Graph {
         if ((!objectExists(opt)) || (!objectExists(loc)) || (opt.show === false)) {
             return;
         }
+        ctx.save();
         let hasMarker = objectExists(opt.markerColor);
         let hasText = objectExists(opt.textColor) && (opt.textSizePx > 0);
         
@@ -807,12 +817,14 @@ class Graph {
         
         // Any more to do?
         if (!(hasText || hasMarker)) {
+            ctx.restore();
             return;
         }
         
         // Note:
         // loc is the bounding box, axis is min, max, marks = array
         ctx.beginPath();
+        ctx.setLineDash([]);
         ctx.strokeStyle = hasMarker ? opt.markerColor : '#000000';
         ctx.lineWidth = 2;
         ctx.fillStyle = opt.textColor;
@@ -883,7 +895,8 @@ class Graph {
                 }
             }
         }
-        ctx.stroke();        
+        ctx.stroke(); 
+        ctx.restore();        
     }
     
     /**
@@ -897,6 +910,8 @@ class Graph {
         if (objectNotExist(opt) || objectNotExist(loc) || (opt.show === false)) {
             return;
         }
+        
+        ctx.save();
         
         let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         
@@ -969,6 +984,7 @@ class Graph {
                 row += 1;
             }
         }
+        ctx.restore();
     }
     
     /**
@@ -982,6 +998,7 @@ class Graph {
         if ((opt === undefined) || (opt === null) || (loc === undefined) ||(loc === null) || (opt.show === false)) {
             return;
         }
+        ctx.save();
         if (objectExists(opt.backgroundColor)) {
             ctx.fillStyle = opt.backgroundColor;
             ctx.fillRect(loc.x, loc.y, loc.w, loc.h);
@@ -994,6 +1011,7 @@ class Graph {
         if (objectExists(opt.textStr) && objectExists(opt.textColor) && (opt.textSizePx > 0)) {
             drawCenteredText(ctx, opt.textColor, 'Verdana', opt.textSizePx, loc, opt.textStr);    
         }        
+        ctx.restore();
     }
 
     /**

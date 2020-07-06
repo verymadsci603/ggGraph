@@ -11,6 +11,9 @@
  /** 
   * @brief  Construct the options for a series line with standard options filled in.
   *
+  * Shapes: '', 'none', null, undefined are the same.
+  *         circle, square, diamond, triangle
+  *
   * @param  lineColor	Either HTML color starting with "#" or "perPoint", or "none"
   * @param  markerShape Either "perPoint" for per point symbols or a symbol name, or "none"
   * @param  markerColor Either HTML color or "perPoint"
@@ -33,6 +36,8 @@ function make_seriesOptions(
         defaultMarkerColor: markerColor,
         defaultMarkerShape: markerShape,
         defaultMarkerSize:  markerSize,
+        graphLineDash:      'solid',
+        lineSizePx:         1,
         xAxisIndex:         xAxisIndex,
         yAxisIndex:         yAxisIndex};        
 }
@@ -324,7 +329,7 @@ function make_graphOptions(
         yAxis: yAxisOptions,
         yAxis2: yAxisOptions2,
         zAxis: zAxisOptions
-        };       
+    };       
 }
 
 

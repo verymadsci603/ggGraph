@@ -23,15 +23,17 @@ class ggTreeEdit {
      * @param   obj     Takes an object.
      * @param   id      ID to track this.
      * @param   rules   Html rules.
+     * @param   width   Width for rules 
      */
-    constructor(obj, id, rules) {
+    constructor(obj, id, rules, width) {
         this.id = id;
         this.names = [];
         this.obj = obj;
         this.html = '';
         this.rules = rules;
         this.changed_callback = undefined;
-        this._tree_create(obj, id, 0, undefined);
+        width = (width === null) || (width === undefined) ? '40%' : width;
+        this._tree_create(obj, id, 0, undefined, width);
         if ((id !== null) && (id !== undefined)) {
             ggTreeHive[id] = this;
         }
@@ -61,11 +63,12 @@ class ggTreeEdit {
      * @param   obj         Object to traverse.
      * @param   id          Object id.
      * @param   count       Indention.
-     * @param   prefix      Prefix to use in the name.
+     * @param   prefix      Prefix to use in the name.     
+     * @param   width       Desired label width.
      *
      * @return  Array of strings.
      */
-    _tree_create(obj, id, count, prefix) {
+    _tree_create(obj, id, count, prefix, width) {
         if ((obj === undefined) || (obj === null)) {
             return;
         }
@@ -88,19 +91,22 @@ class ggTreeEdit {
             } else {
                 this.html +='<div>';
             }       
+         
             for (let ii = 0; ii < k.length; ii++) {
                 this._tree_create(
                     obj[k[ii]], 
                     id, 
                     count + 1, 
-                    count == 0 ? k[ii] : prefix + '.' + k[ii]);
+                    count == 0 ? k[ii] : prefix + '.' + k[ii],
+                    width);
             }
             this.html += '</div></div>';
         } else {
             // Get the editor, if it's none, then it was a noshow so skip it, else append it.
             let editor = this._make_editor(prefix, obj, id);
+            let widthStr = width === undefined ? '"' : 'width: ' + width + ';" ';
             if (editor !== '') {
-                this.html += '<div style="margin-left: 22px;">' + this.prettyPrintPrefix(prefix) + ': ' + this._make_editor(prefix, obj, id) + '</div>';
+                this.html += '<div style="margin-left: 22px;"><div style="display: inline-block; ' + widthStr + '>' + this.prettyPrintPrefix(prefix) + ': </div>' + this._make_editor(prefix, obj, id) + '</div>';
             }
             this.names.push(prefix);
         }
@@ -161,15 +167,18 @@ class ggTreeEdit {
                     let tra = parseInt(value.length > 7 ? value.substring(7) : 'FF', 16);
                     
                     return '<input type="color" ' + 
-                        'style="padding: 0px; border: 0px; background-color: transparent; vertical-align: middle;"' + 
+                        'style="width: 50px; padding: 0px; border: 0px; background-color: transparent; vertical-align: middle;"' + 
+                        ' title="Color" ' + 
                         ' value="' + clr + eventHandler2 + 
-                        '<input style="width: 80px; vertical-align:middle; outline:none;" type="range" min="0" max="255" value="' + tra + eventHandler2;
+                        '<input style="width: 80px; vertical-align:middle; outline:none;" ' + 
+                        ' title="Transparency" ' +
+                        'type="range" min="0" max="255" value="' + tra + eventHandler2;
                 }
                 if (this.rules[ii].v === 'number') {
-                    return '<input type="number"  style="width:60px" value="' + value + eventHandler2;
+                    return '<input type="number"  style="width:50px" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'percent') {
-                    return '<input type="number"style="width:60px" min="0" max="100" value="' + value + eventHandler2;
+                    return '<input type="number" title="Percent" style="width:50px" min="0" max="100" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'text') {
                     return '<input type="text" style="max-width: 120px" value="' + value + eventHandler2;

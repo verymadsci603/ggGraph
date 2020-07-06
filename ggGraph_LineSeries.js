@@ -101,8 +101,9 @@ class LineSeries {
         ctx.stroke();
         
         if ((this.seriesOptions.defaultMarkerSize > 0) && 
-            objectExists(this.seriesOptions.markerColor)) {
-            _draw2DSegment_Marker(
+            objectExists(this.seriesOptions.defaultMarkerColor)) {
+            ctx.fillStyle = ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
+            this._draw2DSegment_Marker(
                 ctx,
                 [x + textSize],
                 [y], 
@@ -122,16 +123,64 @@ class LineSeries {
      * @param   yo		Y offset.
      */
     _draw2DSegment_Marker(ctx, xData, yData, xg, xo, yg, yo) {
-        
+        const pi2 = Math.PI * 2;
         let len = xData.length < yData.length ? xData.length : yData.length;
-        let rad = this.seriesOptions.defaultMarkerSize;
-        let rad2 = this.seriesOptions.defaultMarkerSize * 0.5;
-        for (let ii = 0; ii < len; ii++) {
-            let xp = xData[ii]*xg + xo;
-            let yp = yData[ii]*yg + yo;
-            
-            // Just squares for now.
-            ctx.strokeRect(xp - rad2, yp - rad2, rad, rad);
+        let s = this.seriesOptions.defaultMarkerSize;
+        let s2 = s * 0.5;  
+      
+        // Circle.
+        if (this.seriesOptions.defaultMarkerShape === 'circle') {            
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;                
+                ctx.beginPath();
+                ctx.arc(xp, yp, s2, 0, pi2, false);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Square.
+        if (this.seriesOptions.defaultMarkerShape === 'square') {
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.fillRect(xp - s2, yp - s2, s, s);
+            }
+            return;
+        }
+        
+        // Diamond.
+        if (this.seriesOptions.defaultMarkerShape === 'diamond') {
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp - s2, yp);
+                ctx.lineTo(xp, yp - s2);
+                ctx.lineTo(xp + s2, yp);
+                ctx.lineTo(xp, yp + s2);
+                ctx.lineTo(xp - s2, yp);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Triangle.
+        if (this.seriesOptions.defaultMarkerShape === 'triangle') {
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp - s3, yp - s4);
+                ctx.lineTo(xp + s3, yp - s4);
+                ctx.lineTo(xp, yp + s2);
+                ctx.lineTo(xp - s3, yp - s4);
+                ctx.fill();
+            }
+            return;
         }
     }
     
@@ -306,11 +355,20 @@ class LineSeries {
         
         let accel = _drawAccelerationType(this.seriesOptions);
         let cacheLen = x.cache.length;
+        let dashStyle = toCanvasDash(this.seriesOptions.graphLineDash);
+        let lineWidth = defaultObject(this.seriesOptions.lineSizePx, 1);
+        lineWidth = lineWidth < 0 ? 0 : lineWidth;
         
         // Generic line plot?
         if (accel == 0) {					
+        
+            // Setup outside the loop, then do it.
             ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+            ctx.setLineDash(dashStyle);
+            ctx.lineWidth = lineWidth;
             ctx.beginPath();
+            
+            // Do all relevant ones.
             for (let ii = 0; ii < cacheLen; ii++) {
                 if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min || 
                     y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {					
@@ -319,35 +377,49 @@ class LineSeries {
                 lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);                
             }
             ctx.stroke();
+            ctx.setLineDash([]);
+            return;
         }
             
         // Generic marker plot?
         if (accel == 1)  {
-            ctx.strokeStyle = this.seriesOptions.defaultMarkerColor;
+            
+            // Just markers.
+            ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
             for (let ii = 0; ii < cacheLen; ii++) {
-                if (x.mins[ii] >= dataBounds.xBounds.min && x.maxs[ii] <= dataBounds.xBounds.max && 
-                    y.mins[ii] >= dataBounds.yBounds.min && y.maxs[ii] <= dataBounds.yBounds.max) {					
-
-                    this._draw2DSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo);
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                    continue;
                 }
+                this._draw2DSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo);                
             }
+            return;
         }
         
         // Generic line & marker plot?
-        if (accel == 2)  {				
-            for (let ii = 0; ii < x.length; ii++) {
-                if (x.mins[ii] >= dataBounds.xBounds.min && x.maxs[ii] <= dataBounds.xBounds.max && 
-                    y.mins[ii] >= dataBounds.yBounds.min && y.maxs[ii] <= dataBounds.yBounds.max) {
+        if (accel == 2)  {	
 
-                    ctx.strokeStyle = this.seriesOptions.defaultLineColor;
-                    ctx.beginPath();                    
-                    lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);
-                    ctx.stroke();
-                    
-                    ctx.strokeStyle = this.seriesOptions.defaultMarkerColor;		
-                    this._draw2DSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo);				
+            // Both line and marker, skip within the loop to avoid redundant logic checks.
+            ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
+            for (let ii = 0; ii < x.length; ii++) {
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                    continue;
                 }
+                // Do the lines of this segment.
+                ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+                ctx.setLineDash(dashStyle);
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();                    
+                lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Do the symbols of this segment.
+                this._draw2DSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo);				
             }
+            return;
         }
+        
     }			
 }
