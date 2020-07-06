@@ -167,7 +167,7 @@ class ggTreeEdit {
                     let tra = parseInt(value.length > 7 ? value.substring(7) : 'FF', 16);
                     
                     return '<input type="color" ' + 
-                        'style="width: 50px; padding: 0px; border: 0px; background-color: transparent; vertical-align: middle;"' + 
+                        'style="width: 60px; padding: 0px; border: 0px; background-color: transparent; vertical-align: middle;"' + 
                         ' title="Color" ' + 
                         ' value="' + clr + eventHandler2 + 
                         '<input style="width: 80px; vertical-align:middle; outline:none;" ' + 
@@ -175,19 +175,19 @@ class ggTreeEdit {
                         'type="range" min="0" max="255" value="' + tra + eventHandler2;
                 }
                 if (this.rules[ii].v === 'number') {
-                    return '<input type="number"  style="width:50px" value="' + value + eventHandler2;
+                    return '<input type="number"  style="width:140px; padding:0 2px;" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'percent') {
-                    return '<input type="number" title="Percent" style="width:50px" min="0" max="100" value="' + value + eventHandler2;
+                    return '<input type="number" title="Percent" style="width:140px padding:0 2px;" min="0" max="100" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'text') {
-                    return '<input type="text" style="max-width: 120px" value="' + value + eventHandler2;
+                    return '<input type="text" style="width: 140px; padding:0 2px;" value="' + value + eventHandler2;
                 }
                 if (this.rules[ii].v === 'show') {
-                    return '<select class="gg_itemedit_showhide" ' + eventHandler + '><option>Show</option><option>Hide</option></select>';
+                    return '<select style=width: 140px;" class="gg_itemedit_showhide" ' + eventHandler + '><option>Show</option><option>Hide</option></select>';
                 }
                 if (this.rules[ii].v === 'bool') {
-                    return '<select class="gg_itemedit_bool" ' + eventHandler + '><option>True</option><option>False</option></select>';
+                    return '<select style=width: 140px;" class="gg_itemedit_bool" ' + eventHandler + '><option>True</option><option>False</option></select>';
                 }
                 if (this.rules[ii].v.startsWith('select:')) {
                     let options = this.rules[ii].v.substring(7).split('|');
@@ -195,7 +195,7 @@ class ggTreeEdit {
                     for (let ii = 0; ii < options.length; ii++) {
                         rv += '<option>' + options[ii] + '</option>';
                     }
-                    return '<select ' + eventHandler + '>' + rv + '</select>';
+                    return '<select style="width: 140px;" ' + eventHandler + '>' + rv + '</select>';
                 }
             }
         }

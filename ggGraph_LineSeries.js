@@ -166,8 +166,25 @@ class LineSeries {
             return;
         }
         
-        // Triangle.
+        // Triangles
         if (this.seriesOptions.defaultMarkerShape === 'triangle') {
+            // Point up.
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp - s3, yp + s4);
+                ctx.lineTo(xp, yp - s2);
+                ctx.lineTo(xp + s3, yp + s4);
+                ctx.lineTo(xp - s3, yp + s4);
+                ctx.fill();
+            }
+            return;
+        }
+        if (this.seriesOptions.defaultMarkerShape === 'triangle2') {
+            // Point down
             let s3 = s2 * 0.866025403784;
             let s4 = s2 * 0.5;
             for (let ii = 0; ii < len; ii++) {
@@ -178,6 +195,71 @@ class LineSeries {
                 ctx.lineTo(xp + s3, yp - s4);
                 ctx.lineTo(xp, yp + s2);
                 ctx.lineTo(xp - s3, yp - s4);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Plus
+        if (this.seriesOptions.defaultMarkerShape === 'plus') {
+            let s6 = s * 0.3333333 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp - s6, yp - s2);
+                ctx.lineTo(xp + s6, yp - s2);
+                ctx.lineTo(xp + s6, yp - s6);
+                ctx.lineTo(xp + s2, yp - s6);
+                ctx.lineTo(xp + s2, yp + s6);
+                ctx.lineTo(xp + s6, yp + s6);
+                ctx.lineTo(xp + s6, yp + s2);
+                ctx.lineTo(xp - s6, yp + s2);
+                ctx.lineTo(xp - s6, yp + s6);
+                ctx.lineTo(xp - s2, yp + s6);
+                ctx.lineTo(xp - s2, yp - s6);
+                ctx.lineTo(xp - s6, yp - s6);
+                ctx.lineTo(xp - s6, yp - s2);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Cross
+        if (this.seriesOptions.defaultMarkerShape === 'cross') {
+            let sw = s2 * 0.5;
+            let sl = sw; 
+            for (let ii = 0; ii < len; ii++) {
+                let xp = (xData[ii] * xg) + xo;
+                let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp, yp - sw);
+                ctx.lineTo(xp + sl, yp - sl - sw);
+                ctx.lineTo(xp + sl + sw, yp - sl);
+                ctx.lineTo(xp + sw, yp);
+                ctx.lineTo(xp + sl + sw, yp + sl);
+                ctx.lineTo(xp + sl, yp + sl + sw);
+                ctx.lineTo(xp, yp + sw);
+                ctx.lineTo(xp - sl, yp + sl + sw);
+                ctx.lineTo(xp - sl - sw, yp + sl);
+                ctx.lineTo(xp - sw, yp);
+                ctx.lineTo(xp - sl - sw, yp - sl);
+                ctx.lineTo(xp - sl, yp - sl - sw);
+                ctx.lineTo(xp, yp - sw); 
+/*
+    ctx.moveTo(xp, yp - sw);
+                ctx.lineTo(xp + sl - sw, yp - sl - sw);
+                ctx.lineTo(xp + sl + sw, yp - sl + sw);
+                ctx.lineTo(xp + sw, yp);
+                ctx.lineTo(xp + sl + sw, yp + sl - sw);
+                ctx.lineTo(xp + sl - sw, yp + sl + sw);
+                ctx.lineTo(xp, yp + sw);
+                ctx.lineTo(xp - sl + sw, yp + sl + sw);
+                ctx.lineTo(xp - sl - sw, yp + sl - sw);
+                ctx.lineTo(xp - sw, yp);
+                ctx.lineTo(xp - sl - sw, yp - sl + sw);
+                ctx.lineTo(xp - sl + sw, yp - sl - sw);
+                ctx.lineTo(xp, yp - sw);         */                
                 ctx.fill();
             }
             return;
@@ -401,7 +483,7 @@ class LineSeries {
 
             // Both line and marker, skip within the loop to avoid redundant logic checks.
             ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
-            for (let ii = 0; ii < x.length; ii++) {
+            for (let ii = 0; ii < cacheLen; ii++) {
                 if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
                     y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
                     continue;

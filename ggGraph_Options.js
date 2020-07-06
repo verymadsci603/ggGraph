@@ -12,7 +12,7 @@
   * @brief  Construct the options for a series line with standard options filled in.
   *
   * Shapes: '', 'none', null, undefined are the same.
-  *         circle, square, diamond, triangle
+  *         circle, square, diamond, triangle, triangle2
   *
   * @param  lineColor	Either HTML color starting with "#" or "perPoint", or "none"
   * @param  markerShape Either "perPoint" for per point symbols or a symbol name, or "none"
@@ -122,7 +122,7 @@ function _hasMarker(seriesOptions) {
 function _drawAccelerationType(seriesOptions) { 
     if (!_isDefaults(seriesOptions)) return -1;
     if (_hasLine(seriesOptions)) {
-        if (_hasMarker(seriesOptions)) return 1;
+        if (_hasMarker(seriesOptions)) return 2;
         return 0;
     }
     if (_hasMarker(seriesOptions)) return 1;
