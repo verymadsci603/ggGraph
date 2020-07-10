@@ -235,6 +235,42 @@ function make_axisOptions(
         textSizePx: textSizePx};
 }
 
+/**
+ * @brief   Make event options struct.
+ *
+ * @param   onZoomStart     About to zoom function, can reject.
+ * @param   onZoomEnd       Zoom completed function.
+ * @param   onPanStart      Panned about to occur, can reject.
+ * @param   onPanEnd        Panned completed. 
+ * @param   onBackground    Paint the background function.
+ * @param   onPainted       After painted function.
+ *
+ * onZoomStart(graph, minx, maxx, miny, maxy);
+ *     return false to skip the zoom and just return.
+ * onZoomEnd(graph, minx, maxx, miny, maxy);
+ *
+ * onPanStart(graphClass, changeInX, minx, maxx, changey, miny, maxy);
+ *     return false to not actually do the zoom (reject the action).
+ * onPanEnd(graphClass, changeInX, minx, maxx, changey, miny, maxy);  
+ *
+ * onBackground(graphClass, canvasContext, layout {x:, y:, w:, h:});
+ * onPainted(graphClass, canvasContext, allLayouts{ graph: {}, etc.});
+ */
+function make_eventOptions(
+    onZoomStart,
+    onZoomEnd,
+    onPanStart,
+    onPanEnd,
+    onBackground,
+    onPainted) {
+    return {
+        onZoomStart:  onZoomStart,
+        onZoomEnd:    onZoomEnd,
+        onPanStart:   onPanStart,
+        onPanEnd:     onPanEnd,
+        onBackground: onBackground,
+        onPainted:    onPainted};
+}
 
 /** 
  * @brief   Fill in an axisOptions object based on what is already there.
@@ -297,7 +333,10 @@ function make_graphOptions(
     legendOptions,
     
     // Axis options.
-    xAxisOptions, yAxisOptions, yAxisOptions2, zAxisOptions
+    xAxisOptions, yAxisOptions, yAxisOptions2, zAxisOptions,
+    
+    // Events
+    events
     ) {
         
     return {
@@ -325,10 +364,11 @@ function make_graphOptions(
         title : titleOptions,
         banner: bannerOptions,
         legend: legendOptions,
-        xAxis: xAxisOptions,
-        yAxis: yAxisOptions,
+        xAxis:  xAxisOptions,
+        yAxis:  yAxisOptions,
         yAxis2: yAxisOptions2,
-        zAxis: zAxisOptions
+        zAxis:  zAxisOptions,
+        events: events
     };       
 }
 

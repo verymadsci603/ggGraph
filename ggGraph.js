@@ -638,15 +638,18 @@ class Graph {
         this.graphElements.$zoomReset.css('top', canvas_layout.graph.y);
         if (this.maxBounds === undefined) {
             // Do once, for pan max bounds.
-            this.maxBounds = {'x': { min: axisInfo.xBounds.min, max: axisInfo.xBounds.max}, 'y': { min: axisInfo.yBounds.min, max: axisInfo.yBounds.max}, 'y2': null, 'z': null, 'w': cw, 'h': ch};
+            this.maxBounds = {
+                'x': { min: axisInfo.xBounds.min, max: axisInfo.xBounds.max}, 
+                'y': { min: axisInfo.yBounds.min, max: axisInfo.yBounds.max}, 'y2': null, 'z': null, 'w': cw, 'h': ch};
         }
         if (!objectExists(this.graphOptions)) {
             return; 
         }
-        if (this.graphOptions.main.graphType === '2D') {
+        let graphOptions = this.graphOptions;
+        if (graphOptions.main.graphType === '2D') {
             
             // Paint the series.
-            ctx.fillStyle = this.graphOptions.main.backgroundColor;
+            ctx.fillStyle = graphOptions.main.backgroundColor;
             ctx.clearRect(0, 0, cw, ch);
             ctx.fillRect(0, 0, cw, ch);
             
@@ -655,11 +658,17 @@ class Graph {
             let ymarks2 = objectExists(axisInfo.yBounds2) ? axisInfo.yBounds2.marks : undefined;
             
             ctx.save();
-            this.drawGrid(ctx, true,  canvas_layout.graph, xmarks,  this.graphOptions.xAxis);
-            this.drawGrid(ctx, false, canvas_layout.graph, ymarks,  this.graphOptions.yAxis);
-            this.drawGrid(ctx, false, canvas_layout.graph, ymarks2, this.graphOptions.yAxis2);
+            this.drawGrid(ctx, true,  canvas_layout.graph, xmarks,  graphOptions.xAxis);
+            this.drawGrid(ctx, false, canvas_layout.graph, ymarks,  graphOptions.yAxis);
+            this.drawGrid(ctx, false, canvas_layout.graph, ymarks2, graphOptions.yAxis2);
             ctx.restore();
-            
+
+            if (objectExists(graphOptions.events) && 
+                objectExists(graphOptions.events.onBackground)) {
+                ctx.save();
+                graphOptions.events.onBackground(this, ctx, canvas_layout.graph)          
+                ctx.restore();
+            }
             ctx.save();
             for (let ii = 0; ii < this.series.length; ii++) {
                 this.series[ii].draw2D(ctx, axisInfo, canvas_layout.graph);                    
@@ -680,8 +689,8 @@ class Graph {
                 let ymarksS  = objectExists(summaryAxisInfo.yBounds)  ? summaryAxisInfo.yBounds.marks  : undefined;
                 
                 ctx.save();
-                this.drawGrid(ctx, true,  canvas_layout.xSummary, xmarksS,  this.graphOptions.xAxis);
-                this.drawGrid(ctx, false, canvas_layout.xSummary, ymarksS,  this.graphOptions.yAxis);
+                this.drawGrid(ctx, true,  canvas_layout.xSummary, xmarksS,  graphOptions.xAxis);
+                this.drawGrid(ctx, false, canvas_layout.xSummary, ymarksS,  graphOptions.yAxis);
                 ctx.restore();
 
                 ctx.save();
@@ -696,7 +705,7 @@ class Graph {
                 // Draw the zoomed box.
                 // data to screen, so dividing by the data range, multiply by screen range.
                 // the box is defined by: axisInfo.xBounds.min .max
-                ctx.strokeStyle = defaultObject(this.graphOptions.main.xSummary.markerColor, '#808080');
+                ctx.strokeStyle = defaultObject(graphOptions.main.xSummary.markerColor, '#808080');
                 let xg = canvas_layout.xSummary.w / (summaryAxisInfo.xBounds.max - summaryAxisInfo.xBounds.min);
                 let yg = canvas_layout.xSummary.h / (summaryAxisInfo.yBounds.max - summaryAxisInfo.yBounds.min);
                 let xo = -summaryAxisInfo.xBounds.min * xg + canvas_layout.xSummary.x;
@@ -712,7 +721,7 @@ class Graph {
                     dxr, dyr);
                         
                 // Do the zoom axis.
-                ctx.strokeStyle = defaultObject(this.graphOptions.xAxis.markerColor, '#000000');
+                ctx.strokeStyle = defaultObject(graphOptions.xAxis.markerColor, '#000000');
                 ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.moveTo(canvas_layout.xSummary.x, canvas_layout.xSummary.y);
@@ -722,13 +731,13 @@ class Graph {
                 ctx.stroke();
                 
                 // Draw the two summary axises.
-                this.drawAxis(ctx, true,  this.graphOptions.xAxis, canvas_layout.xAxisSum, xmarksS, true);
-                this.drawAxis(ctx, false, this.graphOptions.yAxis, canvas_layout.yAxisSum, ymarksS, true);
+                this.drawAxis(ctx, true,  graphOptions.xAxis, canvas_layout.xAxisSum, xmarksS, true);
+                this.drawAxis(ctx, false, graphOptions.yAxis, canvas_layout.yAxisSum, ymarksS, true);
             
             }          
                                            
             // Fill behind the axises.
-            ctx.fillStyle = this.graphOptions.main.backgroundColor;
+            ctx.fillStyle = graphOptions.main.backgroundColor;
             let axiss = [canvas_layout.xAxis, canvas_layout.yAxis, canvas_layout.xAxis];
             for (let ii = 0; ii < 3; ii++) {
                 if (objectExists(axiss[ii])) {
@@ -737,14 +746,21 @@ class Graph {
             }
 
             // Paint the axis.            
-            this.drawAxis(ctx, true,  this.graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
-            this.drawAxis(ctx, false, this.graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
-            this.drawAxis(ctx, false, this.graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
+            this.drawAxis(ctx, true,  graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
+            this.drawAxis(ctx, false, graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
+            this.drawAxis(ctx, false, graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
             
             // Paint the legend, title, banner.
-            this.drawLegend(ctx, this.graphOptions.legend, canvas_layout.legend);
-            this.drawTextOption(ctx, this.graphOptions.title,  canvas_layout.title);
-            this.drawTextOption(ctx, this.graphOptions.banner, canvas_layout.banner);
+            this.drawLegend(ctx, graphOptions.legend, canvas_layout.legend);
+            this.drawTextOption(ctx, graphOptions.title,  canvas_layout.title);
+            this.drawTextOption(ctx, graphOptions.banner, canvas_layout.banner);
+            
+            if (objectExists(graphOptions.events) && 
+                objectExists(graphOptions.events.onPainted)) {
+                ctx.save();
+                graphOptions.events.onPainted(this, ctx, canvas_layout)          
+                ctx.restore();
+            }
         }        
     }
     
@@ -1071,8 +1087,18 @@ class Graph {
             ly = minMax(ly, this.maxBounds.y.min, this.maxBounds.y.max);
         }
         this.graphElements.$zoomOut.css('display', 'block');
-        this.graphElements.$zoomReset.css('display', 'block');            
+        this.graphElements.$zoomReset.css('display', 'block'); 
+        if (objectExists(this.graphOptions.events) && 
+            objectExists(this.graphOptions.events.onPanStart)) {
+            if (!this.graphOptions.events.onPanStart(this, dlx, lx, lx + gx, dly, ly, ly + gy)){
+                return;
+            }
+        }        
         this.draw({min: lx, max: lx + gx}, {min: ly, max : ly + gy});
+        if (objectExists(this.graphOptions.events) && 
+            objectExists(this.graphOptions.events.onPanEnd)) {
+            this.graphOptions.events.onPanEnd(this, dlx, lx, lx + gx, dly, ly, ly + gy);            
+        }  
     }
 
     /**
@@ -1132,6 +1158,34 @@ class Graph {
         if (eventObj.target.nodeName === 'BUTTON'){
             return;
         }
+        let wasButton = eventObj.which;
+        let dragKey = eventObj.shiftKey;
+        if (eventId > 10) {
+            let evtStr =  (eventId === 14)? 'move' : eventId === 15 ? 'down' : eventId === 16 ? 'up' : eventId;
+            console.log("Touch event: " + eventId + ' ' + evtStr);
+            eventId -= 10;
+            eventObj.preventDefault();
+            if (objectExists(eventObj.touches) &&
+                (eventObj.touches.length > 1)) {
+                // Treat as drag.
+                dragKey = true;
+            }
+            if (objectExists(eventObj.targetTouches) && 
+                (eventObj.targetTouches.length > 0)) {
+                eventObj.offsetX = eventObj.targetTouches[0].clientX;
+                eventObj.offsetY = eventObj.targetTouches[0].clientY;
+                eventObj.buttons = 1;
+            } else {
+                if (objectExists(eventObj.changedTouches) && 
+                    (eventObj.changedTouches.length > 0)) {
+                    // Touch release.
+                    eventObj.offsetX = eventObj.changedTouches[0].clientX;
+                    eventObj.offsetY = eventObj.changedTouches[0].clientY;
+                    eventObj.buttons = 1;
+                    wasButton = 1;
+                }
+            }
+        }
         switch(eventId){
             case 0: // click.
                 break;
@@ -1171,7 +1225,7 @@ class Graph {
                         // One of the points is out of bounds, don't do anything.
                         return;
                     }
-                    if (!eventObj.shiftKey) {
+                    if (!dragKey) {
                         // left move zoom.
                         // Going to do something, so clear.
                         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
@@ -1215,7 +1269,7 @@ class Graph {
                             ctx.strokeRect(lx, ly, wi, he);
                         }
                     } else {
-                        // Pan.
+                        // Pan.                        
                         this._doPan(eventObj.offsetX, eventObj.offsetY);                        
                     }
                 }
@@ -1253,7 +1307,7 @@ class Graph {
                     hy = eventObj.offsetY;
                 } 
                 
-                if (eventObj.which === 1) {
+                if (wasButton === 1) {
                     let in_normal = 
                         inBox(this.lastXY.x, this.lastXY.y, this.lastLayout.graph) &&
                         inBox(eventObj.offsetX, eventObj.offsetY, this.lastLayout.graph);
@@ -1266,7 +1320,7 @@ class Graph {
                         return;
                     }
 
-                    if (!eventObj.shiftKey) { 
+                    if (!dragKey) { 
                         if ((hx - lx < 4) || (hy - ly < 4)) {
                             return;
                         }
@@ -1314,8 +1368,20 @@ class Graph {
                         
                         this.zoom.push( {x:{min: lx, max: hx}, y:{min: ly, max : hy}});
                         this.graphElements.$zoomOut.css('display', 'block');
-                        this.graphElements.$zoomReset.css('display', 'block');                           
+                        this.graphElements.$zoomReset.css('display', 'block'); 
+                        
+                        if (objectExists(this.graphOptions.events) && 
+                            objectExists(this.graphOptions.events.onZoomStart)) {
+                            if (!this.graphOptions.events.onZoomStart(this, lx, hx, ly, hy)){
+                                return;
+                            }
+                        }        
                         this.draw({min: lx, max: hx}, {min: ly, max : hy});
+                        if (objectExists(this.graphOptions.events) && 
+                            objectExists(this.graphOptions.events.onZoomEnd)) {
+                            this.graphOptions.events.onZoomEnd(this, lx, hx, ly, hy);                             
+                        }  
+                        
                     } else {
                         // On mouse up push the pan change.
                         this.zoom.push( {
@@ -1397,7 +1463,11 @@ function _setup($graphs) {
         ' onmouseleave="ggGraph.canvasEvent(3, this);"' +
         ' onmousemove="ggGraph.canvasEvent(4, this);"' +
         ' onmousedown="ggGraph.canvasEvent(5, this);"' +
-        ' onmouseup="ggGraph.canvasEvent(6, this);"';
+        ' onmouseup="ggGraph.canvasEvent(6, this);"' +
+        // > 10, are touches that remap to mouse like things.
+        ' onTouchstart="ggGraph.canvasEvent(15, this);"' +
+        ' onTouchend="ggGraph.canvasEvent(16, this);"' +
+        ' onTouchmove="ggGraph.canvasEvent(14, this);"';
     const stackedStyle = 'style="position: absolute; top: 0; left: 0;float:none; width:100%; height:100%"';
     const stackedStyle2 = 'style="position: absolute; top: 0; left: 0;float:none; width:100%; height:100%; opacity: 0.2; transition: opacity 0.5s;"';
     const btnStyleStart = 'style="position:relative; display:none; width:30px; height: 30px; left:calc(100% - 30px);" ';

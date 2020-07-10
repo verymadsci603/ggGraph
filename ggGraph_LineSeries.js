@@ -245,25 +245,11 @@ class LineSeries {
                 ctx.lineTo(xp - sw, yp);
                 ctx.lineTo(xp - sl - sw, yp - sl);
                 ctx.lineTo(xp - sl, yp - sl - sw);
-                ctx.lineTo(xp, yp - sw); 
-/*
-    ctx.moveTo(xp, yp - sw);
-                ctx.lineTo(xp + sl - sw, yp - sl - sw);
-                ctx.lineTo(xp + sl + sw, yp - sl + sw);
-                ctx.lineTo(xp + sw, yp);
-                ctx.lineTo(xp + sl + sw, yp + sl - sw);
-                ctx.lineTo(xp + sl - sw, yp + sl + sw);
-                ctx.lineTo(xp, yp + sw);
-                ctx.lineTo(xp - sl + sw, yp + sl + sw);
-                ctx.lineTo(xp - sl - sw, yp + sl - sw);
-                ctx.lineTo(xp - sw, yp);
-                ctx.lineTo(xp - sl - sw, yp - sl + sw);
-                ctx.lineTo(xp - sl + sw, yp - sl - sw);
-                ctx.lineTo(xp, yp - sw);         */                
+                ctx.lineTo(xp, yp - sw);                
                 ctx.fill();
             }
             return;
-        }
+        }        
     }
     
     /**
