@@ -73,25 +73,45 @@ class DataSeries {
     
     /**
      * @brief   Stream in new data, keep no more than max_size.
+     * 
+     * @param   data        New data array.
+     * @param   max_size    Max amount points to keep.
      */
-	stream(data, max_size){
-		this.push(data);
-		let data_len = this.cache.length;
-		let ii = 0;
-		let to_remove = this.cache.length - max_size;
-		while (to_remove > 0) {
-			if (this.cache[0].length >= to_remove) {
-				to_remove -= this.cache[0].length;
-				this.data.shift();
-				this.mins.shift();
-				this.maxs.shift();
-                this.lengths.shift();
-			} else {
-				this.cache[0].slice(-to_remove);
-                this.lengths[0] = this.cache[0].length;
-				break;
-			}
-		}
+	stream(data, max_size) {
+        this.push(data);
+        let total = 0;
+        let cache_len = this.cache.length;
+        for (let ii = this.cache.length - 1; ii >= 0; ii--) {
+            total += this.lengths[ii];
+            if (total < max_size) {
+                continue;
+            }
+            
+            // the iith crosses over, so ii-1 isn't used to zero.
+            if (ii > 0) {
+                if (total === max_size) {
+                    this.cache = this.cache.slice(ii);
+                    this.mins = this.mins.slice(ii);
+                    this.maxs = this.maxs.slice(ii);
+                    this.lengths = this.lengths.slice(ii);
+                    return;
+                } else {
+                    this.cache = this.cache.slice(ii - 1);
+                    this.mins = this.mins.slice(ii - 1);
+                    this.maxs = this.maxs.slice(ii - 1);
+                    this.lengths = this.lengths.slice(ii - 1);
+                }
+            }
+            // Either we cliped so the 0th is this was the zeroth.
+            let remove = total - max_size;
+            this.cache[0] = this.cache[0].slice(remove);
+            this.mins[0] = Math.min(...(this.cache[0]));
+            this.maxs[0] = Math.max(...(this.cache[0]));
+            this.lengths[0] -= remove;
+            
+                
+            break;
+        }		
 	}
     
     /**

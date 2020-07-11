@@ -348,15 +348,19 @@ class Graph {
                     this._legendCalcs = {r: rows, c: maxCols, w: ws, mc : w};                    
                 }
                 
-                // Add in any text label...
-                if (objectExists(opt.textStr) && (opt.textStr.length > 0)) {
-                    rows += 1;
+                // Add in any text label.
+                let hadLabel = objectExists(opt.textStr) && (opt.textStr.length > 0);
+                if (hadLabel) {
+                    rows += 1;   
                 }
                                     
                 // Axis add on.
                 let h = margin + rows * (textSize + margin);
                 if (isAxis) {
                     h += defaultObject(opt.markerSizePx, 6);
+                    if (!hadLabel) {
+                        h += margin;
+                    }
                 }
                 
                 // Border.
@@ -451,13 +455,13 @@ class Graph {
      */
     _computeLayout(ctx, width, height) {
         // Banner is used to be either top or bottom outermost box.
-        let box = {x: 0, y: 0, w: width, h: height};
-        if (!objectExists(this.graphOptions)) {
+        let go = this.graphOptions;
+        if (!objectExists(go)) {
             return {
                 banner:   undefined,
                 title:    undefined,
                 legend:   undefined,
-                graph:    box,
+                graph:    {x: 0, y: 0, w: width, h: height},
                 xSummary: undefined, 
                 xAxisSum: undefined,
                 yAxisSum: undefined,
@@ -469,14 +473,17 @@ class Graph {
         let title    = undefined;
         let legend   = undefined;
         let xSummary = undefined;
+        let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         
-        [banner, box] = this._computeBox(ctx, box, this.graphOptions.banner);
-        [title,  box] = this._computeBox(ctx, box, this.graphOptions.title);
-        [legend, box] = this._computeBox(ctx, box, this.graphOptions.legend, 'legend');
+        let box = {x: 0, y: 0, w: width, h: height};
         
-        let xopt = deepCopy(this.graphOptions.xAxis);
-        let yopt = deepCopy(this.graphOptions.yAxis);
-        let yopt2 = deepCopy(this.graphOptions.yAxis2);
+        [banner, box] = this._computeBox(ctx, box, go.banner);
+        [title,  box] = this._computeBox(ctx, box, go.title);
+        [legend, box] = this._computeBox(ctx, box, go.legend, 'legend');
+        
+        let xopt = deepCopy(go.xAxis);
+        let yopt = deepCopy(go.yAxis);
+        let yopt2 = deepCopy(go.yAxis2);
         if (xopt && (!xopt.loc)) { 
             xopt.loc = 'bottom';
         }
@@ -516,31 +523,50 @@ class Graph {
         let xAxisSum = undefined;
         let yAxisSum = undefined;
 
-        if (objectExists(this.graphOptions.main) && objectExists(this.graphOptions.main.xSummary)) {
-            let behavior = defaultObject(this.graphOptions.main.xSummary.behavior, 'onzoom');
+        if (objectExists(go.main) && objectExists(go.main.xSummary)) {
+            let behavior = defaultObject(go.main.xSummary.behavior, 'onzoom');
             
             if (((this.zoom.length > 0) && (behavior === 'onzoom')) || behavior === 'always') {
-                let percent = defaultObject(this.graphOptions.main.xSummary.sizePercent, 25);
+                // Doing a zoom.
+                let percent = defaultObject(go.main.xSummary.sizePercent, 25);
                 percent = percent < 1 ? 1 : (percent > 100 ? 100 : percent);
-                let alignment = defaultObject(this.graphOptions.main.xSummary.alignment, 'top');
+                let alignment = defaultObject(go.main.xSummary.alignment, 'top');
                 let xSumHeight = box.h * percent / 100;
-                let minPixels = defaultObject(this.graphOptions.main.xSummary.minSizePx, 0);
+                let minPixels = defaultObject(go.main.xSummary.minSizePx, 0);
                 xSumHeight = xSumHeight > minPixels ? xSumHeight : minPixels;
-                if (objectExists(this.graphOptions.main.xSummary.maxSizePx)) {
-                    xSumHeight = xSumHeight < this.graphOptions.main.xSummary.maxSizePx ? 
-                        xSumHeight : this.graphOptions.main.xSummary.maxSizePx;
+                if (objectExists(go.main.xSummary.maxSizePx)) {
+                    xSumHeight = xSumHeight < go.main.xSummary.maxSizePx ? 
+                        xSumHeight : go.main.xSummary.maxSizePx;
                 }
                 [xSummary, box] = this._computeBox(
                     ctx, 
                     box, 
-                    {borderSizePx: 0, loc: alignment, show: true, minSize: xSumHeight});
+                    {borderSizePx: 0, loc: alignment, show: true, minSize: xSumHeight});                
                 yAxis.h -= xSummary.h;
+
                 if (alignment === 'top') {
                     yAxis.y = xSummary.y + xSummary.h;
+                    xAxisSum = {x: xAxis.x, w: xAxis.w, h: xAxis.h, y: xSummary.y + xSummary.h - xAxis.h };
+                    xSummary.h -= xAxisSum.h;   
+                    yAxisSum = {x: yAxis.x, w: yAxis.w, h: xSummary.h, y: xSummary.y};     
+                } else if (alignment === 'bottom') {
+                 /*  box: y 102, h 381
+                   xsum: y 483, h 98
+                   xaxis: y 611, h 29
+                   xaxissum: y 582, h 29
+                   xsum += xaxis
+                   */
+                    xSummary.y += xAxis.h;
+                    xSummary.h -= xAxis.h;
+                    xAxis.y = xSummary.y - xAxis.h;
+                    xAxisSum = {x: xAxis.x, w: xAxis.w, h: xAxis.h, y: xSummary.y + xSummary.h };
+                    //xSummary.h -= xAxisSum.h;   
+                    yAxisSum = {x: yAxis.x, w: yAxis.w, h: xSummary.h, y: xSummary.y}; 
+                } else {
+                    xAxisSum = {x: xAxis.x, w: xAxis.w, h: xAxis.h, y: xSummary.y + xSummary.h - xAxis.h };
+                    xSummary.h -= xAxisSum.h;   
+                    yAxisSum = {x: yAxis.x, w: yAxis.w, h: xSummary.h, y: xSummary.y};                
                 }
-                xAxisSum = {x: xAxis.x, w: xAxis.w, h: xAxis.h, y: xSummary.y + xSummary.h - xAxis.h };
-                xSummary.h -= xAxisSum.h;   
-                yAxisSum = {x: yAxis.x, w: yAxis.w, h: xSummary.h, y: xSummary.y};                
             }
         }        
         
@@ -755,6 +781,27 @@ class Graph {
             this.drawTextOption(ctx, graphOptions.title,  canvas_layout.title);
             this.drawTextOption(ctx, graphOptions.banner, canvas_layout.banner);
             
+            if (objectExists(graphOptions.main.boxEdgeColor)) {
+                let lw = defaultObject(graphOptions.main.boxEdgeSizePx, 1);
+                ctx.lineWidth = lw; 
+                let lw2 = 0.5 * lw;
+                ctx.save();
+                ctx.strokeStyle = graphOptions.main.boxEdgeColor;
+                ctx.strokeRect(
+                    canvas_layout.graph.x + lw2, 
+                    canvas_layout.graph.y + lw2, 
+                    canvas_layout.graph.w - lw - 1, 
+                    canvas_layout.graph.h - lw - 1);
+                if (canvas_layout.xSummary !== undefined) {
+                    ctx.strokeRect(
+                        canvas_layout.xSummary.x + lw2, 
+                        canvas_layout.xSummary.y + lw2, 
+                        canvas_layout.xSummary.w - lw - 1, 
+                        canvas_layout.xSummary.h - lw - 1);
+                }
+                ctx.restore();
+            }
+            
             if (objectExists(graphOptions.events) && 
                 objectExists(graphOptions.events.onPainted)) {
                 ctx.save();
@@ -866,6 +913,7 @@ class Graph {
             }
             
             let textY = loc.y + mark + margin + (opt.textSizePx *0.5);  
+            
             // Marks and or Text.
             let min_x = loc.x;
             let max_x = loc.x + loc.w;
@@ -1522,26 +1570,49 @@ function _init() {
  * @brief   Setup test data in the data hive.
  */
 function _setupTestData() {
-    dsx = new DataSeries('test_guid_1x');
+    dsx1 = new DataSeries('test_guid_1x');
+    dsx2 = new DataSeries('test_guid_2x');
     dsy1 = new DataSeries('test_guid_1y');
     dsy2 = new DataSeries('test_guid_2y');
-    ggGraph_DataHive.add_dataSeries(dsx);
+    dsy3 = new DataSeries('test_guid_3y');
+    dsy4 = new DataSeries('test_guid_4y');
+    dsy5 = new DataSeries('test_guid_5y');
+    ggGraph_DataHive.add_dataSeries(dsx1);
+    ggGraph_DataHive.add_dataSeries(dsx2);
     ggGraph_DataHive.add_dataSeries(dsy1);
     ggGraph_DataHive.add_dataSeries(dsy2);
+    ggGraph_DataHive.add_dataSeries(dsy3);
+    ggGraph_DataHive.add_dataSeries(dsy4);
+    ggGraph_DataHive.add_dataSeries(dsy5);
 
     for (let jj = 0; jj < 4; jj++) {
-        let dx = [];
+        let dx1 = [];
+        let dx2 = [];
         let dy1 = [];
         let dy2 = [];
+        let dy3 = [];
+        let dy4 = [];
+        let dy5 = [];
         for (let ii = 0; ii < 250; ii++) {
             let x = jj + (ii * 0.004);
-            dx.push(jj + (ii * 0.004));
+            dx1.push(jj + (ii * 0.004));
             dy1.push(x * x);
             dy2.push(2 - x * x);
         }
-        dsx.push(dx);
+        for (let ii = 0; ii < 5; ii++) {
+            let x = jj + (ii * 0.2);
+            dx2.push(jj + (ii * 0.2));
+            dy3.push(5 + 0.5 * x * x);
+            dy4.push(2 - 0.25 * x * x);
+            dy5.push(x % 6);
+        }
+        dsx1.push(dx1);
+        dsx2.push(dx2);
         dsy1.push(dy1);
         dsy2.push(dy2);
+        dsy3.push(dy3);
+        dsy4.push(dy4);
+        dsy5.push(dy5);
     }
 }
 

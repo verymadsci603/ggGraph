@@ -7,6 +7,9 @@
  *
  */
 
+/**
+ * @brief   Base class for a series.
+ */
 class LineSeries {
     constructor(seriesOptions, xGuid, yGuid, zGuid = '', valuesGuid = '', colorsGuid = '', symbolsGuid = '', labelsGuid = '') {
         this.seriesOptions = seriesOptions;
@@ -110,6 +113,7 @@ class LineSeries {
                 1, 0, 1, 0);
         }           
     }
+    
     
     /**
      * @brief 	Draw a line graph, one color, no markers.
@@ -251,6 +255,162 @@ class LineSeries {
             return;
         }        
     }
+    
+    /**
+     * @brief 	Draw extended, for per-color, per-size and or per-label series.
+     * 
+     * @param 	ctx		Canvas context.
+     * @param 	xData	X series data values array.
+     * @param 	yData	Y series data values array.
+     * @param   mData   Marker kind data.
+     * @param   sData   Symbol size data.
+     * @param   cData   Color data.
+     * @param   lData   Label data.
+     * @param 	xg 		X gain.
+     * @param   xo		X offset.
+     * @param 	yg 		Y gain.
+     * @param   yo		Y offset.
+     * @param 	sg 		X gain.
+     * @param   so		X offset.
+     * @param 	cg 		Y gain.
+     * @param   co		Y offset.
+     */    
+    _draw2DSegment_MarkerEx(ctx, xData, yData, sData, mData, cData, lData, 
+        xg, xo, yg, yo, sg, so, cg, co) {
+        
+        let len = xData.length < yData.length ? xData.length : yData.length;
+        let defShape = this.seriesOptions.defaultMarkerShape;
+        let defSize  = this.seriesOptions.defaultMarkerSize;
+        let defColor = this.seriesOptions.defaultMarkerColor;
+    
+        
+        // Too hard to not do this per-point.
+        // 
+        // These graphs are complex, so typically not many (<10k) points,
+        // we can always make this faster later.
+        for (let ii = 0; ii < len; ii++) {
+            let xp = (xData[ii] * xg) + xo;
+            let yp = (yData[ii] * yg) + yo;
+            let shape = mData !== undefined ? mData[ii] : defShape;
+            let size  = sData !== undefined ? (sData[ii] * sg) + so : defSize;
+            let color = cData !== undefined ? valueToColor((cData[ii] * cg) + co) : defColor;
+            _drawOneMarker(ctx, shape, size, color, xp, yp);
+        }      
+    }
+    
+    
+    /** 
+     * @brief   Draw a marker of a given shape, size and color centered at xp,yp.
+     *
+     * @param   ctx     Context 2D.
+     * @param   shape   Shape name or index.
+     * @param   s       Size.
+     * @param   color   Fill color
+     * @param   xp      X coordinate.
+     * @param   yp      Y coordinate.
+     */
+    _drawOneMarker(ctx, shape, s, color, xp, yp) {
+        const pi2 = Math.PI * 2;
+        
+        ctx.fillStyle = color;
+
+        // Circle.
+        if ((shape === 0) || (shape === 'circle')) {            
+            ctx.beginPath();
+            ctx.arc(xp, yp, s, 0, pi2, false);
+            ctx.fill();
+            return;
+        }
+        
+        // Square.
+        let s2 = size * 0.5;
+        if ((shape === 1) || (shape === 'square')) { 
+            ctx.fillStyle = color;
+            ctx.fillRect(xp - s2, yp - s2, s, s);
+            return;
+        }
+        
+        // Diamond.
+        if ((shape === 2) || (shape === 'diamond')) { 
+            ctx.beginPath();
+            ctx.moveTo(xp - s2, yp);
+            ctx.lineTo(xp, yp - s2);
+            ctx.lineTo(xp + s2, yp);
+            ctx.lineTo(xp, yp + s2);
+            ctx.lineTo(xp - s2, yp);
+            ctx.fill();
+            return;
+        }
+        
+        // Triangles
+        if ((shape === 3) || (shape === 'triangle')) { 
+            // Point up.
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(xp - s3, yp + s4);
+            ctx.lineTo(xp, yp - s2);
+            ctx.lineTo(xp + s3, yp + s4);
+            ctx.lineTo(xp - s3, yp + s4);
+            ctx.fill();
+            return;
+        }
+        if ((shape === 4) || (shape === 'triangle2')) { 
+            // Point down
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(xp - s3, yp - s4);
+            ctx.lineTo(xp + s3, yp - s4);
+            ctx.lineTo(xp, yp + s2);
+            ctx.lineTo(xp - s3, yp - s4);
+            ctx.fill();
+            return;
+        }
+        
+        // Plus
+        if ((shape === 5) || (shape === 'plus')) { 
+            let s6 = s * 0.3333333 * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(xp - s6, yp - s2);
+            ctx.lineTo(xp + s6, yp - s2);
+            ctx.lineTo(xp + s6, yp - s6);
+            ctx.lineTo(xp + s2, yp - s6);
+            ctx.lineTo(xp + s2, yp + s6);
+            ctx.lineTo(xp + s6, yp + s6);
+            ctx.lineTo(xp + s6, yp + s2);
+            ctx.lineTo(xp - s6, yp + s2);
+            ctx.lineTo(xp - s6, yp + s6);
+            ctx.lineTo(xp - s2, yp + s6);
+            ctx.lineTo(xp - s2, yp - s6);
+            ctx.lineTo(xp - s6, yp - s6);
+            ctx.lineTo(xp - s6, yp - s2);
+            ctx.fill();
+            return;
+        }
+        
+        // Cross
+        if ((shape === 6) || (shape === 'cross')) { 
+            let sw = s2 * 0.5;
+            let sl = sw; 
+            ctx.beginPath();
+            ctx.moveTo(xp, yp - sw);
+            ctx.lineTo(xp + sl, yp - sl - sw);
+            ctx.lineTo(xp + sl + sw, yp - sl);
+            ctx.lineTo(xp + sw, yp);
+            ctx.lineTo(xp + sl + sw, yp + sl);
+            ctx.lineTo(xp + sl, yp + sl + sw);
+            ctx.lineTo(xp, yp + sw);
+            ctx.lineTo(xp - sl, yp + sl + sw);
+            ctx.lineTo(xp - sl - sw, yp + sl);
+            ctx.lineTo(xp - sw, yp);
+            ctx.lineTo(xp - sl - sw, yp - sl);
+            ctx.lineTo(xp - sl, yp - sl - sw);
+            ctx.lineTo(xp, yp - sw);                
+            ctx.fill();
+            return;
+        }        
+    }    
     
     /**
      * @brief   Find the "best" mouse over point.
@@ -489,5 +649,59 @@ class LineSeries {
             return;
         }
         
+        
+        let vData = this.vGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.vGuid);
+        let cData = this.cGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.cGuid);
+        let sData = this.sGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.sGuid);
+        let lData = this.lGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.lGuid);        
+        
+        // Size and color conversion stuff.
+        let vmin = vData === undefined ? 0 : vData.min();
+        let vmax = vData === undefined ? 1 : vData.max();
+        let cmin = cData === undefined ? 0 : cData.min();
+        let cmax = cData === undefined ? 1 : cData.max();
+        let maxs = defaultObject(this.seriesOptions.defaultMarkerSize, 40);
+        let vg = (maxs - 2) / (vmax - vmin);
+        let vo = maxs - (g * vmax);
+        let cg = 1.0 / (cmax - cmin);
+        let co = 0;
+        
+        // Lines, if any.
+        for (let ii = 0; ii < cacheLen; ii++) {
+            if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                continue;
+            }
+            // Do the lines of this segment.
+            ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+            ctx.setLineDash(dashStyle);
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();                    
+            lpx, lpy = this._draw2DSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // Markers, if any.
+        for (let ii = 0; ii < cacheLen; ii++) {
+            if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                continue;
+            }
+            // Not super accelerated.
+            _draw2DSegment_MarkerEx(ctx, 
+                x.cache[ii], y.cache[ii], 
+                vData === undefined ? undefined : vData.cache[ii], // Size like
+                sData === undefined ? undefined : sData.cache[ii], // Shape like
+                cData === undefined ? undefined : cData.cache[ii], // Color like
+                lData === undefined ? undefined : lData.cache[ii], // Label like                
+                xg, xo, yg, yo, vg, vo, cg, co);            
+        }
     }			
+}
+
+class Line2DSeries extends LineSeries {
+    constructor(seriesOptions, xGuid, yGuid, valuesGuid = '', colorsGuid = '', symbolsGuid = '', labelsGuid = '') {
+        super(seriesOptions, xGuid, yGuid, '', valuesGuid, colorsGuid, symbolsGuid, labelsGuid);
+    }
 }

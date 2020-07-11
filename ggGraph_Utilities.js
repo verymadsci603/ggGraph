@@ -96,11 +96,12 @@ function inBox(x, y, box) {
 function toCanvasDash(dashOption) {
     dashOption = objectExists(dashOption) ? dashOption : 'solid';
     if (dashOption === 'solid') return [];
-    if (dashOption === 'dash') return [10, 10];
-    if (dashOption === 'dot') return [2, 10];
-    if (dashOption === 'dashdot') return [10, 10, 2, 10];
-    if (dashOption === 'dashdashdot') return [10, 10, 10, 10, 2, 10];
-    if (dashOption === 'dashdashdotdot') return [10, 10, 10, 10, 2, 10, 2, 10];
+    if (dashOption === 'dash') return [8, 8];
+    if (dashOption === 'dot') return [2, 8];
+    if (dashOption === 'dashdot') return [8, 8, 2, 8];
+    if (dashOption === 'dashdotdot') return [8, 8, 2, 8, 2, 8];
+    if (dashOption === 'dashdashdot') return [8, 8, 8, 8, 2, 8];
+    if (dashOption === 'dashdashdotdot') return [8, 8, 8, 8, 2, 8, 2, 8];
     return dashOption;
 }
 
@@ -171,11 +172,11 @@ function drawCenteredFloorText(ctx, color, fontName, textSizePx, layout, textStr
     textStr = textStr.trim();
     let tw = ctx.measureText(textStr).width;
     ctx.fillStyle = color;
-    ctx.font = "" + textStr + "px " + fontName;
+    ctx.font = "" + textSizePx + "px " + fontName;
     ctx.fillText(
         textStr, 
         layout.x + (layout.w - tw) / 2, 
-        layout.y + layout.h);  
+        layout.y + 1 + layout.h - (textSizePx / 2));  
 }    
 
 /**
@@ -215,6 +216,42 @@ function isElement(obj) {
         (typeof obj.nodeType === 1) && 
         (typeof obj.nodeName === "string");
 }
+
+/** 
+ * @brief   Turn a value to a color.
+ *
+ * @param   val     Value to turn into HTML color, 0 to 1 float.
+ *
+ * @return  HTML color string such as '#000000'.
+ */
+function valueToColor(val) {
+    const interp = [ 
+        255,   0,   0,  // red
+        255, 165,   0,  // orange
+        255, 255,   0,  // yellow
+        0,   255,   0,  // green
+        0,    80,  80,  // teal
+        0,     0, 255,  // blue
+        75,    0, 130,  // indigo
+        238, 130, 238]; // violet
+    const interp_len = (interp.length/3) - 1;
+    let l = Math.floor(val * interp_len);
+    let f = (val * interp_len) - l;
+    let h = l < interp_len ? l + 1 : interp_len;
+    let f1 = f - 1;
+    l = l * 3;
+    h = h * 3;
+    let r = interp[l3] * f1 + interp[h3] * f;
+    let g = interp[l3 + 1] * f1 + interp[h3 + 1] * f;
+    let b = interp[l3 + 2] * f1 + interp[h3 + 2] * f;
+    r = r.toString(16);
+    g = g.toString(16);
+    b = b.toString(16);
+    r = r.length < 2 ? '0' + r : r;
+    g = g.length < 2 ? '0' + g : g;
+    b = b.length < 2 ? '0' + b : b;
+    return '#' + r + g + b;
+}    
 
 /**
  * @brief   Turn a value into a short string for axis markings.

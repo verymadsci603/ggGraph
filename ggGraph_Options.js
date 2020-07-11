@@ -118,6 +118,7 @@ function _hasMarker(seriesOptions) {
  *  0 = Line only, 1 color.
  *  1 = Marker only, 1 color.
  *  2 = Marker and line 1 color each.
+ *  3 = Bubbles, all same color shape, but size is by value.
  */
 function _drawAccelerationType(seriesOptions) { 
     if (!_isDefaults(seriesOptions)) return -1;
@@ -345,6 +346,7 @@ function make_graphOptions(
             graphType: '2D',
             backgroundColor: backgroundColor,
             boxEdgeColor: boxEdgeColor,
+            boxEdgeSizePx: 1,
             textColor: textColor,
             textSizePx: textSizePx,
             marginPx: marginPx,
