@@ -294,7 +294,7 @@ class LineSeries {
             let shape = mData !== undefined ? mData[ii] : defShape;
             let size  = sData !== undefined ? (sData[ii] * sg) + so : defSize;
             let color = cData !== undefined ? valueToColor((cData[ii] * cg) + co) : defColor;
-            _drawOneMarker(ctx, shape, size, color, xp, yp);
+            this._drawOneMarker(ctx, shape, size, color, xp, yp);
         }      
     }
     
@@ -323,7 +323,7 @@ class LineSeries {
         }
         
         // Square.
-        let s2 = size * 0.5;
+        let s2 = s * 0.5;
         if ((shape === 1) || (shape === 'square')) { 
             ctx.fillStyle = color;
             ctx.fillRect(xp - s2, yp - s2, s, s);
@@ -561,6 +561,36 @@ class LineSeries {
     }
     
     /**
+     * @brief   Calculate how we are (or not) accelerating this graph.
+     *
+     * @return  Either -1, 0, 1 or 2.
+     *
+     * @details
+     * -1 = no accel
+     *  0 = Line only, 1 color.
+     *  1 = Marker only, 1 color.
+     *  2 = Marker and line 1 color each.
+     */
+    _drawAccelerationType() {
+        if (objectExists(this.vGuid) || objectExists(this.cGuid) || 
+            objectExists(this.sGuid) || objectExists(this.lGuid)) {
+            // Don't accelerate.
+            return -1;
+        }
+        
+        if (!objectExists(this.seriesOptions)) {
+            return -1;
+        }
+        
+        let hasMarker = objectExists(this.seriesOptions.defaultMarkerShape);
+        let hasLine = objectExists(this.seriesOptions.defaultLineColor);
+        if (hasLine) {
+            return hasMarker ? 2 : 0;
+        }
+        return hasMarker ? 1 : -1;
+    }
+    
+    /**
      * @brief   Render to the context.
      *
      * @param   ctx             Context 2D.
@@ -581,7 +611,7 @@ class LineSeries {
         let yg = layout.h / (dataBounds.yBounds.max - dataBounds.yBounds.min);
         let yo = -dataBounds.yBounds.min * yg + layout.y;
         
-        let accel = _drawAccelerationType(this.seriesOptions);
+        let accel = this._drawAccelerationType();
         let cacheLen = x.cache.length;
         let dashStyle = toCanvasDash(this.seriesOptions.graphLineDash);
         let lineWidth = defaultObject(this.seriesOptions.lineSizePx, 1);
@@ -650,10 +680,10 @@ class LineSeries {
         }
         
         
-        let vData = this.vGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.vGuid);
-        let cData = this.cGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.cGuid);
-        let sData = this.sGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.sGuid);
-        let lData = this.lGuid === undefined ? undefined : ggGraph_DataHive.get_dataSeries(this.lGuid);        
+        let vData = !objectExists(this.vGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.vGuid);
+        let cData = !objectExists(this.cGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.cGuid);
+        let sData = !objectExists(this.sGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.sGuid);
+        let lData = !objectExists(this.lGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.lGuid);        
         
         // Size and color conversion stuff.
         let vmin = vData === undefined ? 0 : vData.min();
@@ -662,7 +692,7 @@ class LineSeries {
         let cmax = cData === undefined ? 1 : cData.max();
         let maxs = defaultObject(this.seriesOptions.defaultMarkerSize, 40);
         let vg = (maxs - 2) / (vmax - vmin);
-        let vo = maxs - (g * vmax);
+        let vo = maxs - (vg * vmax);
         let cg = 1.0 / (cmax - cmin);
         let co = 0;
         
@@ -689,7 +719,7 @@ class LineSeries {
                 continue;
             }
             // Not super accelerated.
-            _draw2DSegment_MarkerEx(ctx, 
+            this._draw2DSegment_MarkerEx(ctx, 
                 x.cache[ii], y.cache[ii], 
                 vData === undefined ? undefined : vData.cache[ii], // Size like
                 sData === undefined ? undefined : sData.cache[ii], // Shape like

@@ -70,66 +70,7 @@ function default_seriesOptions(seriesOptions, themeColor) {
         xAxisIndex:         defaultObject(seriesOptions.xAxisIndex,  undefined),
         yAxisIndex:         defaultObject(seriesOptions.yAxisIndex,  undefined)};
 }
-    
-/**
- * @brief   Is this line's options fancy or does it have default behavior?
- *
- * @param   seriesOptions   Options to check.
- *
- * @return  True if no options are 'perPoint'.
- */
-function _isDefaults(seriesOptions) {
-    return (seriesOptions.defaultLineColor != 'perPoint') &&
-        (seriesOptions.defaultMarkerColor != 'perPoint') &&
-        (seriesOptions.defaultMarkerShape != 'perPoint');
-}
-    
-/**
- * @brief   Does this seriesOption have line like properties?
- * 
- * @param   seriesOptions   Options to check.
- *
- * @return  True if it has line properties.
- */
-function _hasLine(seriesOptions) {
-    return objectExists(seriesOptions.defaultLineColor);
-}
- 
-/**
- * @brief   Does this seriesOption have marker like properties?
- * 
- * @param   seriesOptions   Options to check.
- *
- * @return  True if it has marker properties.
- */ 
-function _hasMarker(seriesOptions) {
-    return objectExists(seriesOptions.defaultMarkerShape);
-}
-
-/**
- * @brief   Kind of graphics draw acceleration to use.
- *
- * @param   seriesOptions   Options JSON.
- *
- * @return  Either -1, 0, 1 or 2.
- *
- * @details
- * -1 = no accel
- *  0 = Line only, 1 color.
- *  1 = Marker only, 1 color.
- *  2 = Marker and line 1 color each.
- *  3 = Bubbles, all same color shape, but size is by value.
- */
-function _drawAccelerationType(seriesOptions) { 
-    if (!_isDefaults(seriesOptions)) return -1;
-    if (_hasLine(seriesOptions)) {
-        if (_hasMarker(seriesOptions)) return 2;
-        return 0;
-    }
-    if (_hasMarker(seriesOptions)) return 1;
-    return -1;
-}
-
+     
 /** 
  * @brief   Used to make title, banner, legend options.
  *

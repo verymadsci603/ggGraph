@@ -10,7 +10,7 @@
 /** 
  * @brief   Check to see if an object is "real".
  *
- * @note    Checks for undefined and null, but also 'none'
+ * @note    Checks for undefined and null, but also 'none' and ''
  *          to support servers that generate 'none' in JSON
  *          like Python does (against the standard).
  *
@@ -19,7 +19,7 @@
  * @return  Checks against undefined, null and 'none'.
  */
 function objectExists(obj) {
-    return !((obj === undefined) || (obj === null) || (obj === 'none'));        
+    return !((obj === undefined) || (obj === null) || (obj === 'none') || (obj === ''));        
 }
 
 /** 
@@ -238,12 +238,18 @@ function valueToColor(val) {
     let l = Math.floor(val * interp_len);
     let f = (val * interp_len) - l;
     let h = l < interp_len ? l + 1 : interp_len;
-    let f1 = f - 1;
+    let f1 = 1 - f;
     l = l * 3;
     h = h * 3;
-    let r = interp[l3] * f1 + interp[h3] * f;
-    let g = interp[l3 + 1] * f1 + interp[h3 + 1] * f;
-    let b = interp[l3 + 2] * f1 + interp[h3 + 2] * f;
+    let r = interp[l] * f1 + interp[h] * f;
+    let g = interp[l + 1] * f1 + interp[h + 1] * f;
+    let b = interp[l + 2] * f1 + interp[h + 2] * f;
+    r = Math.round(r);
+    g = Math.round(g);
+    b = Math.round(b);    
+    r = r < 0 ? 0 : r > 255 ? 255 : r;
+    g = g < 0 ? 0 : g > 255 ? 255 : g;
+    b = b < 0 ? 0 : b > 255 ? 255 : b;
     r = r.toString(16);
     g = g.toString(16);
     b = b.toString(16);

@@ -412,12 +412,15 @@ class Graph {
                         mc : tw + (margin + textSize) * 2};      
                 }
                 // Text if it exists.
+                let wi = 0;
                 if (objectExists(opt.textStr) && 
                     objectExists(opt.textColor) && 
                     (opt.textSizePx > 0)) {
-                    let wi = ctx.measureText(opt.textColor.trim()).width;
-                    tw = tw > wi ? tw : wi; 
-                }
+                    wi = ctx.measureText(opt.textStr.trim()).width;
+                } 
+                tw = tw > wi ? tw : wi; 
+                wi = ctx.measureText('01234').width;
+                tw = tw > wi ? tw : wi; 
                 let w = margin + ((tw === 0) ? 0 : tw + margin);
                 
                 // If axis...
@@ -790,14 +793,14 @@ class Graph {
                 ctx.strokeRect(
                     canvas_layout.graph.x + lw2, 
                     canvas_layout.graph.y + lw2, 
-                    canvas_layout.graph.w - lw - 1, 
-                    canvas_layout.graph.h - lw - 1);
+                    canvas_layout.graph.w - lw, 
+                    canvas_layout.graph.h - lw);
                 if (canvas_layout.xSummary !== undefined) {
                     ctx.strokeRect(
                         canvas_layout.xSummary.x + lw2, 
                         canvas_layout.xSummary.y + lw2, 
-                        canvas_layout.xSummary.w - lw - 1, 
-                        canvas_layout.xSummary.h - lw - 1);
+                        canvas_layout.xSummary.w - lw, 
+                        canvas_layout.xSummary.h - lw);
                 }
                 ctx.restore();
             }
@@ -1601,10 +1604,10 @@ function _setupTestData() {
         }
         for (let ii = 0; ii < 5; ii++) {
             let x = jj + (ii * 0.2);
-            dx2.push(jj + (ii * 0.2));
+            dx2.push(x);
             dy3.push(5 + 0.5 * x * x);
             dy4.push(2 - 0.25 * x * x);
-            dy5.push(x % 6);
+            dy5.push(ii);
         }
         dsx1.push(dx1);
         dsx2.push(dx2);
