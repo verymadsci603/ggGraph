@@ -79,7 +79,43 @@ class LineSeries {
         }
         return xp, yp;
     }
-
+    
+    /**
+     * @brief 	Draw a line graph, one color, no markers.
+     * 
+     * @param 	ctx		Canvas context.
+     * @param 	lpx		Last pixel X position.
+     * @param 	lpy		Last pixel Y position.
+     * @param 	xData	X series data values array.
+     * @param 	yData	Y series data values array.
+     * @param 	xg 		X gain.
+     * @param   xo		X offset.
+     * @param 	yg 		Y gain.
+     * @param   yo		Y offset.
+     * @param   xso     X screen offset.
+     * @param   yso     Y screen offset.
+     */
+    _draw2DPolarSegment_Line(ctx, lpx, lpy, xData, yData, xg, xo, yg, yo, xso, yso) {
+        let len = xData.length < yData.length ? xData.length : yData.length;
+        let xp = lpx;
+        let yp = lpy;
+        if (lpx === null || lpy === null) {            
+            let a = (xData[0] * xg) + xo;
+            let r = (yData[0] * yg) + yo; 
+            xp = r * Math.sin(a) + xso;
+            yp = r * Math.cos(a) + yso;
+        }
+        for (let ii = 0; ii < len; ii++) {
+            ctx.moveTo(xp, yp);				
+            let a = (xData[ii] * xg) + xo;
+            let r = (yData[ii] * yg) + yo; 
+            xp = r * Math.sin(a) + xso;
+            yp = r * Math.cos(a) + yso;
+            ctx.lineTo(xp, yp);
+        }
+        return xp, yp;
+    }
+          
     /**
      * @brief   Draw legend entry.
      *
@@ -236,6 +272,169 @@ class LineSeries {
             for (let ii = 0; ii < len; ii++) {
                 let xp = (xData[ii] * xg) + xo;
                 let yp = (yData[ii] * yg) + yo;
+                ctx.beginPath();
+                ctx.moveTo(xp, yp - sw);
+                ctx.lineTo(xp + sl, yp - sl - sw);
+                ctx.lineTo(xp + sl + sw, yp - sl);
+                ctx.lineTo(xp + sw, yp);
+                ctx.lineTo(xp + sl + sw, yp + sl);
+                ctx.lineTo(xp + sl, yp + sl + sw);
+                ctx.lineTo(xp, yp + sw);
+                ctx.lineTo(xp - sl, yp + sl + sw);
+                ctx.lineTo(xp - sl - sw, yp + sl);
+                ctx.lineTo(xp - sw, yp);
+                ctx.lineTo(xp - sl - sw, yp - sl);
+                ctx.lineTo(xp - sl, yp - sl - sw);
+                ctx.lineTo(xp, yp - sw);                
+                ctx.fill();
+            }
+            return;
+        }        
+    }
+    
+    /**
+     * @brief 	Draw a line graph, one color, no markers.
+     * 
+     * @param 	ctx		Canvas context.
+     * @param 	xData	X series data values array.
+     * @param 	yData	Y series data values array.
+     * @param 	xg 		X gain.
+     * @param   xo		X offset.
+     * @param 	yg 		Y gain.
+     * @param   yo		Y offset.
+     * @param   xso     X screen offset.
+     * @param   yso     Y screen offset.
+     */
+    _draw2DPolarSegment_Marker(ctx, xData, yData, xg, xo, yg, yo, xso, yso) {
+        const pi2 = Math.PI * 2;
+        let len = xData.length < yData.length ? xData.length : yData.length;
+        let s = this.seriesOptions.defaultMarkerSize;
+        let s2 = s * 0.5;  
+
+        // Circle.
+        if (this.seriesOptions.defaultMarkerShape === 'circle') {            
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+                ctx.beginPath();
+                ctx.arc(xp, yp, s2, 0, pi2, false);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Square.
+        if (this.seriesOptions.defaultMarkerShape === 'square') {
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
+                ctx.fillRect(xp - s2, yp - s2, s, s);
+            }
+            return;
+        }
+        
+        // Diamond.
+        if (this.seriesOptions.defaultMarkerShape === 'diamond') {
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
+                ctx.beginPath();
+                ctx.moveTo(xp - s2, yp);
+                ctx.lineTo(xp, yp - s2);
+                ctx.lineTo(xp + s2, yp);
+                ctx.lineTo(xp, yp + s2);
+                ctx.lineTo(xp - s2, yp);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Triangles
+        if (this.seriesOptions.defaultMarkerShape === 'triangle') {
+            // Point up.
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
+                ctx.beginPath();
+                ctx.moveTo(xp - s3, yp + s4);
+                ctx.lineTo(xp, yp - s2);
+                ctx.lineTo(xp + s3, yp + s4);
+                ctx.lineTo(xp - s3, yp + s4);
+                ctx.fill();
+            }
+            return;
+        }
+        if (this.seriesOptions.defaultMarkerShape === 'triangle2') {
+            // Point down
+            let s3 = s2 * 0.866025403784;
+            let s4 = s2 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
+                ctx.beginPath();
+                ctx.moveTo(xp - s3, yp - s4);
+                ctx.lineTo(xp + s3, yp - s4);
+                ctx.lineTo(xp, yp + s2);
+                ctx.lineTo(xp - s3, yp - s4);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Plus
+        if (this.seriesOptions.defaultMarkerShape === 'plus') {
+            let s6 = s * 0.3333333 * 0.5;
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
+                ctx.beginPath();
+                ctx.moveTo(xp - s6, yp - s2);
+                ctx.lineTo(xp + s6, yp - s2);
+                ctx.lineTo(xp + s6, yp - s6);
+                ctx.lineTo(xp + s2, yp - s6);
+                ctx.lineTo(xp + s2, yp + s6);
+                ctx.lineTo(xp + s6, yp + s6);
+                ctx.lineTo(xp + s6, yp + s2);
+                ctx.lineTo(xp - s6, yp + s2);
+                ctx.lineTo(xp - s6, yp + s6);
+                ctx.lineTo(xp - s2, yp + s6);
+                ctx.lineTo(xp - s2, yp - s6);
+                ctx.lineTo(xp - s6, yp - s6);
+                ctx.lineTo(xp - s6, yp - s2);
+                ctx.fill();
+            }
+            return;
+        }
+        
+        // Cross
+        if (this.seriesOptions.defaultMarkerShape === 'cross') {
+            let sw = s2 * 0.5;
+            let sl = sw; 
+            for (let ii = 0; ii < len; ii++) {
+                let a = (xData[ii] * xg) + xo;
+                let r = (yData[ii] * yg) + yo; 
+                let xp = r * Math.sin(a) + xso;
+                let yp = r * Math.cos(a) + yso;
+
                 ctx.beginPath();
                 ctx.moveTo(xp, yp - sw);
                 ctx.lineTo(xp + sl, yp - sl - sw);
@@ -727,7 +926,154 @@ class LineSeries {
                 lData === undefined ? undefined : lData.cache[ii], // Label like                
                 xg, xo, yg, yo, vg, vo, cg, co);            
         }
-    }			
+    }
+
+
+    /**
+     * @brief   Render to the context.
+     *
+     * @param   ctx             Context 2D.
+     * @param   dataBounds      Restriction bounds.
+     * @param   layout          Where to paint.
+     */
+    draw2DPolar(ctx, dataBounds, layout) {
+        
+        let x = this.getData('x');
+        let y = this.getData('y');
+        let lpx = null;
+        let lpy = null;
+        
+        // For polar, we want to treat the 'x' axis as an angle, and 'y' as range.
+        // Also square this up so we aren't stretching it.
+        // Thus:
+        // a = x*xg + xo
+        // r = y*yg + yo
+        // xp = r * sin(a) + xso
+        // yp = r * cos(a) + yso
+               
+        let squaredUp = layout.w < layout.h ? layout.w : layout.h;
+        let squaredUp2 = squaredUp / 2;
+        let xso = layout.x + layout.w / 2;
+        let yso = layout.y + layout.h / 2;
+        
+        // This does most negative is center (0), we can do zero center (1)
+        // as an option passed in for the y-axis, use yAxisOptions.polar
+        let ygt = objectExists(this.seriesOptions) ? defaultObject(this.seriesOptions.polarRange, 1) : 1;
+        let yg = squaredUp2 / (dataBounds.yBounds.max - dataBounds.yBounds.min);            
+        let yo = -dataBounds.yBounds.min * yg;
+        if (ygt === '1' || ygt === 1) {
+            let absmax = Math.abs(dataBounds.yBounds.max);
+            let absmin = Math.abs(dataBounds.yBounds.min);
+            let max_ex = absmax > absmin ? absmax : absmin;
+            yg = squaredUp2 / max_ex;           
+            yo = 0;
+        }
+        
+        let xo = 0;
+        let xgt = objectExists(this.seriesOptions) ? defaultObject(this.seriesOptions.polarAngle, 'rad') : 'rad';
+        let xg = xgt === 'rad' ? 1 : xgt === 'mills' ? Math.PI / 1800 : Math.PI / 180;
+        
+        let accel = this._drawAccelerationType();
+        let cacheLen = x.cache.length;
+        let dashStyle = toCanvasDash(this.seriesOptions.graphLineDash);
+        let lineWidth = defaultObject(this.seriesOptions.lineSizePx, 1);
+        lineWidth = lineWidth < 0 ? 0 : lineWidth;
+        
+        // Generic line plot?
+        if (accel == 0) {					
+        
+            // Setup outside the loop, then do it.
+            ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+            ctx.setLineDash(dashStyle);
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            
+            // Do all relevant ones.
+            for (let ii = 0; ii < cacheLen; ii++) {
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min || 
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {					
+                    continue;
+                }
+                lpx, lpy = this._draw2DPolarSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo, xso, yso);                
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+            return;
+        }
+            
+        // Generic marker plot?
+        if (accel == 1)  {
+            
+            // Just markers.
+            ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
+            for (let ii = 0; ii < cacheLen; ii++) {
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                    continue;
+                }
+                this._draw2DPolarSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo, xso, yso);               
+            }
+            return;
+        }
+        
+        // Generic line & marker plot?
+        if (accel == 2)  {	
+
+            // Both line and marker, skip within the loop to avoid redundant logic checks.
+            ctx.fillStyle = this.seriesOptions.defaultMarkerColor;
+            for (let ii = 0; ii < cacheLen; ii++) {
+                if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                    y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                    continue;
+                }
+                // Do the lines of this segment.
+                ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+                ctx.setLineDash(dashStyle);
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();                    
+                lpx, lpy = this._draw2DPolarSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo, xso, yso);  
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Do the symbols of this segment.
+                this._draw2DPolarSegment_Marker(ctx, x.cache[ii], y.cache[ii], xg, xo, yg, yo, xso, yso);  				
+            }
+            return;
+        }
+        
+        
+        let vData = !objectExists(this.vGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.vGuid);
+        let cData = !objectExists(this.cGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.cGuid);
+        let sData = !objectExists(this.sGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.sGuid);
+        let lData = !objectExists(this.lGuid) ? undefined : ggGraph_DataHive.get_dataSeries(this.lGuid);        
+        
+        // Size and color conversion stuff.
+        let vmin = vData === undefined ? 0 : vData.min();
+        let vmax = vData === undefined ? 1 : vData.max();
+        let cmin = cData === undefined ? 0 : cData.min();
+        let cmax = cData === undefined ? 1 : cData.max();
+        let maxs = defaultObject(this.seriesOptions.defaultMarkerSize, 40);
+        let vg = (maxs - 2) / (vmax - vmin);
+        let vo = maxs - (vg * vmax);
+        let cg = 1.0 / (cmax - cmin);
+        let co = 0;
+        
+        // Lines, if any.
+        for (let ii = 0; ii < cacheLen; ii++) {
+            if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                continue;
+            }
+            // Do the lines of this segment.
+            ctx.strokeStyle = this.seriesOptions.defaultLineColor;
+            ctx.setLineDash(dashStyle);
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();                    
+            lpx, lpy = this._draw2DPolarSegment_Line(ctx, lpx, lpy, x.cache[ii], y.cache[ii], xg, xo, yg, yo, xso, yso);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }    
 }
 
 class Line2DSeries extends LineSeries {

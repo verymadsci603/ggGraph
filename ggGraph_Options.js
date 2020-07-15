@@ -32,6 +32,8 @@ function make_seriesOptions(
     
     return {
         name:               name,
+        polarAngle:         'rad', // undefined or 'rad', 'mills', or deg.
+        polarRange:         '1',   // Can be 1 for unity, negatives are 180, 0 means most negative is center, logs can be used.
         defaultLineColor:   lineColor,
         defaultMarkerColor: markerColor,
         defaultMarkerShape: markerShape,
@@ -144,7 +146,7 @@ function default_textBoxOptions(
  *
  * @param   show            Show or hide this.
  * @param   textStr         The text.
- * @param   isLog           Axis is a log.
+ * @param   log             Axis is 'ln' or 'log10' or 'powln' or 'pow10'
  * @param   backgroundColor Box background color.
  * @param   markerColor     Marker tic color, used for edge like drawing.
  * @param   graphlineColor  Graph background below lines color lines up with tics.
@@ -156,7 +158,7 @@ function default_textBoxOptions(
 function make_axisOptions(
     show,
     textStr,
-    isLog,
+    log,
     backgroundColor,
     markerColor,
     graphlineColor, 
@@ -167,7 +169,8 @@ function make_axisOptions(
     return {
         show: show,
         textStr: textStr,
-        isLog: isLog,
+        log: log,
+        polarAngle: undefined, // or 'rad' or 'deg' or 'mills'
         backgroundColor: backgroundColor,
         markerColor: markerColor,
         graphlineColor: graphlineColor,
@@ -230,7 +233,8 @@ function default_axisOptions(
         return {
             show: true,
             textStr: '',
-            isLog: false,
+            log: '',
+            polar: undefined,
             backgroundColor: undefined,
             markerColor: themeColor,
             graphlineColor: themeColor,
@@ -242,7 +246,8 @@ function default_axisOptions(
     return {
         show:            defaultObject(tbOptions.show,            true),
         textStr:         defaultObject(tbOptions.textStr,         ''),
-        isLog:           defaultObject(tbOptions.isLog,           false),
+        log:             defaultObject(tbOptions.log,             ''),
+        polar:           defaultObject(tbOptions.polar,           undefined),
         backgroundColor: defaultObject(tbOptions.backgroundColor, undefined),
         markerColor:     defaultObject(tbOptions.markerColor,     themeColor),
         graphlineColor:  defaultObject(tbOptions.graphlineColor,  themeColor),

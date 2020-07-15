@@ -291,6 +291,20 @@ class Graph {
     _computeBox(ctx, box, opt, kind) {
         let isAxis = kind === 'axis';
         let isLegend = kind === 'legend';
+        
+        if (isAxis && (this.graphOptions.main.graphType === '2DPolar')) {
+            // unused, don't alter the box.
+            return [{
+                x: box.x, 
+                y: box.y,
+                w: 0,
+                h: 0}, { 
+                x: box.x,
+                y: box.y,
+                w: box.w,
+                h: box.h}];
+        }
+
         let margin = defaultObject(this.graphOptions.main.marginPx, 2);
         if ((this.graphOptions) && (opt) && (opt.show)) {
             // Either way, both need this.
@@ -472,6 +486,7 @@ class Graph {
                 yAxis:    undefined,
                 yAxis2:   undefined};
         }
+
         let banner   = undefined;
         let title    = undefined;
         let legend   = undefined;
@@ -675,13 +690,52 @@ class Graph {
             return; 
         }
         let graphOptions = this.graphOptions;
+        
+        // Paint the series.            
+        ctx.fillStyle = graphOptions.main.backgroundColor;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.fillRect(0, 0, cw, ch);
+        
+        // 2D polar graphs.
+        if (graphOptions.main.graphType === '2DPolar') {
+            if (objectExists(graphOptions.events) && 
+                objectExists(graphOptions.events.onBackground)) {
+                ctx.save();
+                graphOptions.events.onBackground(this, ctx, canvas_layout.graph)          
+                ctx.restore();
+            }
+            
+            let ymarks  = objectExists(axisInfo.yBounds)  ? axisInfo.yBounds.marks  : undefined;
+
+            ctx.save();
+            this.drawGridPolar(ctx, true,  canvas_layout.graph, undefined,  graphOptions.xAxis);
+            this.drawGridPolar(ctx, false, canvas_layout.graph, ymarks,  graphOptions.yAxis);
+            ctx.restore();
+                        
+            ctx.save();
+            for (let ii = 0; ii < this.series.length; ii++) {
+                this.series[ii].draw2DPolar(ctx, axisInfo, canvas_layout.graph);                    
+            }
+            ctx.restore();
+            
+            // Clear out around the graph.
+            let right = canvas_layout.graph.x + canvas_layout.graph.w;
+            let bot = canvas_layout.graph.y + canvas_layout.graph.h;
+            ctx.clearRect(0, 0, canvas_layout.graph.x, ch);     // Left.
+            ctx.clearRect(right, 0, cw - right, ch);            // Right.
+            ctx.clearRect(0, 0, cw, canvas_layout.graph.y);     // Top.
+            ctx.clearRect(0, bot, cw, ch - bot);                // Bottom.
+
+            // Paint the legend, title, banner.
+            this.drawLegend(ctx, graphOptions.legend, canvas_layout.legend);
+            this.drawTextOption(ctx, graphOptions.title,  canvas_layout.title);
+            this.drawTextOption(ctx, graphOptions.banner, canvas_layout.banner);
+
+        }
+
+        // 2D graphs.
         if (graphOptions.main.graphType === '2D') {
-            
-            // Paint the series.
-            ctx.fillStyle = graphOptions.main.backgroundColor;
-            ctx.clearRect(0, 0, cw, ch);
-            ctx.fillRect(0, 0, cw, ch);
-            
+                       
             let xmarks  = objectExists(axisInfo.xBounds)  ? axisInfo.xBounds.marks  : undefined;
             let ymarks  = objectExists(axisInfo.yBounds)  ? axisInfo.yBounds.marks  : undefined;
             let ymarks2 = objectExists(axisInfo.yBounds2) ? axisInfo.yBounds2.marks : undefined;
@@ -778,7 +832,7 @@ class Graph {
             this.drawAxis(ctx, true,  graphOptions.xAxis,  canvas_layout.xAxis,  xmarks, false);
             this.drawAxis(ctx, false, graphOptions.yAxis,  canvas_layout.yAxis,  ymarks, false);
             this.drawAxis(ctx, false, graphOptions.yAxis2, canvas_layout.yAxis2, ymarks2, false);
-            
+
             // Paint the legend, title, banner.
             this.drawLegend(ctx, graphOptions.legend, canvas_layout.legend);
             this.drawTextOption(ctx, graphOptions.title,  canvas_layout.title);
@@ -804,14 +858,53 @@ class Graph {
                 }
                 ctx.restore();
             }
-            
-            if (objectExists(graphOptions.events) && 
-                objectExists(graphOptions.events.onPainted)) {
-                ctx.save();
-                graphOptions.events.onPainted(this, ctx, canvas_layout)          
-                ctx.restore();
+        }
+        
+        if (objectExists(graphOptions.events) && 
+            objectExists(graphOptions.events.onPainted)) {
+            ctx.save();
+            graphOptions.events.onPainted(this, ctx, canvas_layout)          
+            ctx.restore();
+        }    
+    }
+    
+    /**
+     * @brief   Draw the grid lines, if any.
+     * 
+     * @param   ctx             Context.
+     * @param   isAngle    Is it horizontal or vertical?
+     * @param   layout          Layout.
+     * @param   marks           Where the marks go, an array.
+     * @param   opts            Options for how to do it.
+     */
+    drawGridPolar(ctx, isAngle, layout, marks, opts) {
+        if ((!objectExists(opts)) || (!objectExists(opts.graphlineColor))) {
+            return;
+        }
+        ctx.beginPath();
+        let clr = opts.graphlineColor;
+        clr = (clr === undefined) || (clr === null) ? '#000000' : clr;
+        ctx.strokeStyle = clr;
+        ctx.setLineDash(toCanvasDash(opts.graphLineDash));
+        let sx = layout.x + (0.5 * layout.w);
+        let sy = layout.y + (0.5 * layout.h);
+        let squared = layout.w < layout.h ? layout.w : layout.h;
+        let r = squared / 2;
+        if (isAngle) {
+                     
+            for (let ii = 0; ii < 8; ii++) {
+                let a = Math.PI * ii / 4;
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(sx + (r * Math.sin(a)), sy + (r * Math.cos(a)));
             }
-        }        
+        } else {
+            for (let ii = 0; ii < marks.length; ii++) { 
+                let rp = r * marks[ii].p;
+                ctx.arc(sx, sy, rp, 0, 2*Math.PI);
+            }
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
     }
     
     /**
@@ -1215,7 +1308,7 @@ class Graph {
             let evtStr =  (eventId === 14)? 'move' : eventId === 15 ? 'down' : eventId === 16 ? 'up' : eventId;
             console.log("Touch event: " + eventId + ' ' + evtStr);
             eventId -= 10;
-            eventObj.preventDefault();
+            eventObj.preventDefault();   
             if (objectExists(eventObj.touches) &&
                 (eventObj.touches.length > 1)) {
                 // Treat as drag.
@@ -1575,6 +1668,7 @@ function _init() {
 function _setupTestData() {
     dsx1 = new DataSeries('test_guid_1x');
     dsx2 = new DataSeries('test_guid_2x');
+    dsxr = new DataSeries('test_guid_rx');
     dsy1 = new DataSeries('test_guid_1y');
     dsy2 = new DataSeries('test_guid_2y');
     dsy3 = new DataSeries('test_guid_3y');
@@ -1582,6 +1676,7 @@ function _setupTestData() {
     dsy5 = new DataSeries('test_guid_5y');
     ggGraph_DataHive.add_dataSeries(dsx1);
     ggGraph_DataHive.add_dataSeries(dsx2);
+    ggGraph_DataHive.add_dataSeries(dsxr);
     ggGraph_DataHive.add_dataSeries(dsy1);
     ggGraph_DataHive.add_dataSeries(dsy2);
     ggGraph_DataHive.add_dataSeries(dsy3);
@@ -1591,6 +1686,7 @@ function _setupTestData() {
     for (let jj = 0; jj < 4; jj++) {
         let dx1 = [];
         let dx2 = [];
+        let dxr = [];
         let dy1 = [];
         let dy2 = [];
         let dy3 = [];
@@ -1605,12 +1701,14 @@ function _setupTestData() {
         for (let ii = 0; ii < 5; ii++) {
             let x = jj + (ii * 0.2);
             dx2.push(x);
+            dxr.push(x);
             dy3.push(5 + 0.5 * x * x);
             dy4.push(2 - 0.25 * x * x);
             dy5.push(ii);
         }
         dsx1.push(dx1);
         dsx2.push(dx2);
+        dsxr.push(dxr);
         dsy1.push(dy1);
         dsy2.push(dy2);
         dsy3.push(dy3);

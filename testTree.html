@@ -41,7 +41,10 @@
             { k: 'name',            v: 'text'},
             { k: 'graphLineDash',   v: 'select:solid|dash|dot|dashdot|dashdotdot|dashdashdot|dashdashdotdot'},
             { k: '.kindsAllowed',   v: 'text'},
-            { k: '.graphType',      v: 'text'}];
+            { k: '.graphType',      v: 'text'},
+            { k: '.polarAngle',     v: 'select:none|rad|mills|deg'},
+            { k: '.polarRange',     v: 'select:1|0'}]
+            
             
         // Graph options.
         let t = new ggTreeEdit(g.graphOptions, 'testId', rules);
