@@ -237,7 +237,9 @@ class Graph {
                 let shx = this.series[ii].max('x');
                 let sly = this.series[ii].min('y');
                 let shy = this.series[ii].max('y');
-                
+                if (this.graphOptions.main.graphType === '2DPolar') {
+                    sly = sly > 0 ? 0 : sly;
+                }
                 if (lxf && objectExists(slx)) {
                     lx = objectExists(lx) ? (slx < lx ? slx : lx) : slx;
                 }
@@ -263,8 +265,14 @@ class Graph {
         if (useMain) {
             mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxis.w, 
                 canvas_layout.xAxis.h, this.graphOptions.main.marginPx, this.graphOptions.xAxis);
+            // If this is polar, canvas_layout.yAxis.h = -1, instead use main graph.
+            let yAxis_h = canvas_layout.yAxis.h;
+            if (this.graphOptions.main.graphType === '2DPolar') {
+                yAxis_h = 0.5 * (canvas_layout.graph.w < canvas_layout.graph.h ? 
+                    canvas_layout.graph.w : canvas_layout.graph.h);
+            }
             my = this._computeAxisMarkers(ctx, false, ly, hy, canvas_layout.yAxis.w, 
-                canvas_layout.yAxis.h, this.graphOptions.main.marginPx, this.graphOptions.yAxis);
+                yAxis_h, this.graphOptions.main.marginPx, this.graphOptions.yAxis);
         } else {
             mx = this._computeAxisMarkers(ctx, true, lx, hx, canvas_layout.xAxisSum.w, 
                 canvas_layout.xAxisSum.h, this.graphOptions.main.marginPx, this.graphOptions.xAxis);
@@ -698,6 +706,14 @@ class Graph {
         
         // 2D polar graphs.
         if (graphOptions.main.graphType === '2DPolar') {
+            // Back in the graph layout slightly.
+            let ltmp = canvas_layout.graph;
+            let sx = ltmp.x + (0.5 * ltmp.w);
+            let sy = ltmp.y + (0.5 * ltmp.h);
+            let r = -1 + 0.5 * (ltmp.w < ltmp.h ? ltmp.w : ltmp.h);
+            
+            canvas_layout.graph = {x: sx - r, y: sy -r, w: r + r, h: r + r};
+            
             if (objectExists(graphOptions.events) && 
                 objectExists(graphOptions.events.onBackground)) {
                 ctx.save();
@@ -708,8 +724,8 @@ class Graph {
             let ymarks  = objectExists(axisInfo.yBounds)  ? axisInfo.yBounds.marks  : undefined;
 
             ctx.save();
-            this.drawGridPolar(ctx, true,  canvas_layout.graph, undefined,  graphOptions.xAxis);
-            this.drawGridPolar(ctx, false, canvas_layout.graph, ymarks,  graphOptions.yAxis);
+            this.drawGridPolar(ctx, true,  canvas_layout.graph, undefined, sx, sy, r, graphOptions.xAxis);
+            this.drawGridPolar(ctx, false, canvas_layout.graph, ymarks, sx, sy, r, graphOptions.yAxis);
             ctx.restore();
                         
             ctx.save();
@@ -871,13 +887,16 @@ class Graph {
     /**
      * @brief   Draw the grid lines, if any.
      * 
-     * @param   ctx             Context.
-     * @param   isAngle    Is it horizontal or vertical?
-     * @param   layout          Layout.
-     * @param   marks           Where the marks go, an array.
-     * @param   opts            Options for how to do it.
+     * @param   ctx         Context.
+     * @param   isAngle     Is it horizontal or vertical?
+     * @param   layout      Layout.
+     * @param   marks       Where the marks go, an array.
+     * @param   sx          Center X.
+     * @param   sy          Center Y.
+     * @param   r           radius.
+     * @param   opts        Options for how to do it.
      */
-    drawGridPolar(ctx, isAngle, layout, marks, opts) {
+    drawGridPolar(ctx, isAngle, layout, marks, sx, sy, r, opts) {
         if ((!objectExists(opts)) || (!objectExists(opts.graphlineColor))) {
             return;
         }
@@ -886,21 +905,58 @@ class Graph {
         clr = (clr === undefined) || (clr === null) ? '#000000' : clr;
         ctx.strokeStyle = clr;
         ctx.setLineDash(toCanvasDash(opts.graphLineDash));
-        let sx = layout.x + (0.5 * layout.w);
-        let sy = layout.y + (0.5 * layout.h);
-        let squared = layout.w < layout.h ? layout.w : layout.h;
-        let r = squared / 2;
+
+        // In case we do the text.                  
+        let hasText = objectExists(opts.textColor) && (opts.textSizePx > 0);
+        if (hasText) {
+            ctx.fillStyle = opts.textColor;   
+        }
+        
         if (isAngle) {
-                     
+            let angleStyle = objectExists(this.graphOptions.xAxisOptions) ?
+                defaultObject(this.graphOptions.xAxisOptions.polarAngle, 'deg') :
+                'deg';
+            let angleMarkers = 
+                angleStyle === 'nsew'   ? ['N',  'NW',    'W',   'SW',   'S',    'SE',    'E',    'NE']:
+                angleStyle === 'deg'    ? [  0,  45,       90,    135,   180,     225,    270,     315]:
+                angleStyle === 'mills'  ? [  0,  450,     900,   1350,  1800,    2250,   2700,    3150]:
+                angleStyle === 'rad'    ? [  0,  0.785,  1.57,  2.356,  3.14,   3.926,   4.71,   5.497]:
+                angleStyle === 'sdeg'   ? [  0,  45,       90,    135,   180,    -135,    -90,     -45]:
+                angleStyle === 'smills' ? [  0,  450,     900,   1350,  1800,   -1350,   -900,    -450]:
+                /*srad*/                  [  0,  0.785,  1.57,  2.356,  3.14,  -2.356,  -1.57,  -0.785];
+                
             for (let ii = 0; ii < 8; ii++) {
                 let a = Math.PI * ii / 4;
                 ctx.moveTo(sx, sy);
-                ctx.lineTo(sx + (r * Math.sin(a)), sy + (r * Math.cos(a)));
+                let ex = sx + (r * Math.sin(a));
+                let ey = sy + (r * Math.cos(a));
+                ctx.lineTo(ex, ey);
+                if (hasText && (ii % 2 === 1)) {
+                    // Only the odd ones.
+                    let tw = ctx.measureText(angleMarkers[ii]).width;  
+                    ex += ex > sx ? opts.textSizePx : -tw - opts.textSizePx;
+                    ey += ey < sy ? 0 : opts.textSizePx; 
+                    ctx.fillText(angleMarkers[ii], ex, ey);
+                }
             }
         } else {
-            for (let ii = 0; ii < marks.length; ii++) { 
+            for (let ii = 0; ii < marks.length; ii++) {
+
+                // Draw the circles.
                 let rp = r * marks[ii].p;
                 ctx.arc(sx, sy, rp, 0, 2*Math.PI);
+                      
+                if (!hasText) {
+                    continue;
+                }
+                
+                let offset = 0.5 * opts.textSizePx;
+                
+                // Draw the text.
+                if (ii > 0) {               
+                    ctx.fillText(marks[ii].t, sx, sy + r - rp + offset - 1); // Lower.                
+                    ctx.fillText(marks[ii].t, sx, sy - r + rp - offset);     // Upper
+                }
             }
         }
         ctx.stroke();
@@ -1189,7 +1245,8 @@ class Graph {
             (!objectExists(this.lastLayout.graph)) ||
             (!objectExists(this.lastBounds))       ||
             (!objectExists(this.lastBounds.x))     ||
-            (!objectExists(this.lastBounds.y))) {
+            (!objectExists(this.lastBounds.y))     ||
+            (this.graphOptions.main.graphType === '2DPolar')) {
             return;
         }
         
@@ -1663,6 +1720,18 @@ function _init() {
 }
 
 /**
+ * @brief   Find all ggGraphs and set them up.
+ *
+ * @param   graphElementQuery   Jquery to initialize
+ */
+function _initByJQuery(graphElementQuery) {		
+    _setup($(graphElementQuery));
+    setInterval(function () {
+        $(graphElementQuery).each(function () { _resize(this);});
+    }, 250);
+}
+
+/**
  * @brief   Setup test data in the data hive.
  */
 function _setupTestData() {
@@ -1747,7 +1816,14 @@ ggGraph = {
 	 * Call to discover any 
 	 * Initializes all ggGraph_line, ggGraph_scatter, etc. element classes and html elements.
 	 */
-	initialize : _init,
+	initialize: _init,
+    
+    /**
+     * Call to initialize by jquery filter one or more graphs.
+     *
+     * @param   graphElementQuery   Jquery to initialize
+     */
+    initializeByJQuery: _initByJQuery,
 	
 	/**
 	 * Get the graph class for a given thing.

@@ -1,0 +1,345 @@
+<html>
+<header>
+<script src="jquery-3.5.1.min.js"/></script>
+<script src="ggGraph_Utilities.js"></script>
+<script src="ggGraph_Options.js"></script>
+<script src="ggGraph_DataSeries.js"></script>
+<script src="ggGraph_DataHive.js"></script>
+<script src="ggGraph_LineSeries.js"></script>
+<script src="ggGraph.js"></script>
+<script> 
+    let loadedOnce = false;
+    window.addEventListener('DOMContentLoaded', (event) => {
+        if (loadedOnce) {
+            return;
+        }
+        loadedOnce = true;
+        
+        // Init all HTML things.
+		ggGraph.initialize();
+        
+        // To init just one for debugging: ggGraph.initializeByJQuery('#polarGraph');
+		
+        // This gives us a bunch of data for testing things.
+        ggGraph.setupTestData();
+        
+        // Line graph 1.
+        let g1 = new Graph('lineGraph1', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 1,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'auto x xy y', currentMode: 'auto', fillColor: '#80808080', strokeColor: ''},
+                xSummary: {behavior: 'onzoom', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'top'} 
+            },
+            title: {show: true, textStr: 'Simple line graph', backgroundColor: '#FFFFFF', textColor: '#000000', textSizePx: 11, loc: 'top'},
+            banner: undefined,
+            legend: {show: true, textStr: 'Legend', backgroundColor: '#FFFFFF', textColor: '#000000', textSizePx: 10, loc: 'bottom'},        
+            xAxis: {
+                show: true, textStr: 'x-axis', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dash', markerSizePx: 4, textColor: '#000000', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: 'y', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dash', markerSizePx: 4, textColor: '#000000', textSizePx: 10}
+            });
+        let opt1a = make_seriesOptions('red series', '#ff0000', 'none', 'none', 0, 0, 0);
+        let opt1b = make_seriesOptions('green series', '#00ff00', 'none', 'none', 0, 0, 0);
+        g1.addSeries(new LineSeries(opt1a, 'test_guid_1x', 'test_guid_1y'));
+        g1.addSeries(new LineSeries(opt1b, 'test_guid_1x', 'test_guid_2y'));        
+		let t0 = performance.now(); // Each is 2k points, 1k per series.
+		ggGraph.getGraph('lineGraph1').draw();  ggGraph.getGraph('lineGraph1').draw();
+		ggGraph.getGraph('lineGraph1').draw();  ggGraph.getGraph('lineGraph1').draw();
+		ggGraph.getGraph('lineGraph1').draw();  ggGraph.getGraph('lineGraph1').draw();
+		ggGraph.getGraph('lineGraph1').draw();  ggGraph.getGraph('lineGraph1').draw();
+		ggGraph.getGraph('lineGraph1').draw();  ggGraph.getGraph('lineGraph1').draw();
+        $('#lineGraph1_label').html('Drawing 1k points in ' + (0.05 * (performance.now() - t0)) + ' msec');
+
+        // Zoom box plot 
+        let g2 = new Graph('lineGraph2', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 1,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'x', currentMode: 'x', fillColor: '#80808080', strokeColor: ''},
+                xSummary: {behavior: 'always', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'bottom'} 
+            },
+            title: {show: true, textStr: 'Top banner', backgroundColor: '#000080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            banner: {show: true, textStr: 'Bottom banner', backgroundColor: '#000080', textColor: '#FFFFFF', textSizePx: 12, loc: 'bottom'},
+            legend: {show: false, textStr: 'Legend', backgroundColor: '#FFFFFF', textColor: '#FFFFFF', textSizePx: 10, loc: 'bottom'},        
+            xAxis: {
+                show: true, textStr: 'x', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: 'y', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10}
+            });
+        let opt2a = make_seriesOptions('blue series', '#0000FF', 'none', 'none', 0, 0, 0);
+        let opt2b = make_seriesOptions('green series', '#00FF00', 'none', 'none', 0, 0, 0);
+        g2.addSeries(new LineSeries(opt2a, 'test_guid_2x', 'test_guid_3y'));
+        g2.addSeries(new LineSeries(opt2b, 'test_guid_2x', 'test_guid_4y'));    
+
+        // Marker plot 
+        let g3 = new Graph('markerGraph1', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: {show: true, textStr: 'Markers!', backgroundColor: '#808080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10}
+            });
+        g3.addSeries(new LineSeries({
+            name: 'blue', defaultLineColor: '#0000FF', defaultMarkerColor: 'none', defaultMarkerShape: 'none', defaultMarkerSize: 0,
+            graphLineDash: 'dashdot', lineSizePx: 2, xAxisIndex: 0, yAxisIndex: 0}, 'test_guid_2x', 'test_guid_3y'));
+        g3.addSeries(new LineSeries({
+            name: 'green markers', defaultLineColor: 'none', defaultMarkerColor: '#00FF00', defaultMarkerShape: 'triangle', defaultMarkerSize: 10,
+            graphLineDash: 'solid', lineSizePx: 0, xAxisIndex: 0, yAxisIndex: 0}, 'test_guid_2x', 'test_guid_4y'));
+
+        // Stream graph.
+        let g4 = new Graph('streamGraph1', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: {show: true, textStr: 'Markers!', backgroundColor: '#808080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10}
+            });
+            
+            let srx = new DataSeries('streamGuid_x');
+            let sry = new DataSeries('streamGuid_y');
+            ggGraph_DataHive.add_dataSeries(srx);
+            ggGraph_DataHive.add_dataSeries(sry);
+            let streamCounter = -1;
+            let $btn = $('#onoff_stream_button').on(
+                'click', 
+                function(){ this.textContent = this.textContent === 'off' ? 'on' : 'off';});
+            setInterval(function(){ 
+                if (($btn[0].textContent === 'off') && (streamCounter !== -1)){
+                    return;
+                }
+                let dx = [];
+                let dy = [];
+                for (let ii = 0; ii < 20; ii++) {
+                    let x = streamCounter + 0.05 * ii;
+                    dx.push(x);
+                    dy.push(Math.sin(x));
+                }
+                srx.stream(dx, 400);
+                sry.stream(dy, 400);
+                streamCounter++;
+                g4.draw(undefined, undefined);
+            }, 50);
+        g4.addSeries(new LineSeries({
+            name: 'blue', defaultLineColor: '#0000FF', defaultMarkerColor: 'none', defaultMarkerShape: 'none', defaultMarkerSize: 0,
+            graphLineDash: 'dashdot', lineSizePx: 2, xAxisIndex: 0, yAxisIndex: 0}, 'streamGuid_x', 'streamGuid_y'));
+    
+        <!-- Bubble graph. -->               
+        let g5 = new Graph('bubbleGraph1', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: {show: true, textStr: 'Markers!', backgroundColor: '#808080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#000000', graphLineDash: 'dot', markerSizePx: 4, textColor: '#00FF00', textSizePx: 10}
+            });
+        g5.addSeries(new Line2DSeries({
+            name: 'blue', defaultLineColor: '#0000FF', defaultMarkerColor: '#FF800040', defaultMarkerShape: 'circle', defaultMarkerSize: 60,
+            graphLineDash: 'solid', lineSizePx: 2, xAxisIndex: 0, yAxisIndex: 0}, 'test_guid_2x', 'test_guid_3y', 'test_guid_3y'));
+        
+        <!-- Bubble, color, symbol, graph. -->    
+        let g6 = new Graph('bubbleColorSymbol', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: undefined,
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10}
+            });
+        g6.addSeries(new Line2DSeries({
+            name: 'nifty!', defaultLineColor: '#FF8000', defaultMarkerColor: 'none', defaultMarkerShape: 'none', defaultMarkerSize: 40,
+            graphLineDash: 'solid', lineSizePx: 2, xAxisIndex: 0, yAxisIndex: 0}, 
+            'test_guid_2x', // x
+            'test_guid_3y', // y 
+            'test_guid_4y', // size
+            'test_guid_5y', // color
+            'test_guid_5y'  // symbol
+            ));        
+        
+        <!-- Polar. -->    
+        let g7 = new Graph('polarGraph', {
+            main : {
+                graphType: '2DPolar',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: {show: true, textStr: 'Polar', backgroundColor: '#808080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10}
+            });
+        g7.addSeries(new Line2DSeries({
+            name: '', defaultLineColor: '#FF8000', defaultMarkerColor: 'none', defaultMarkerShape: 'none', defaultMarkerSize: 40,
+            graphLineDash: 'solid', lineSizePx: 2, xAxisIndex: 0, yAxisIndex: 0}, 
+            'test_guid_rx',     // x
+            'test_guid_3y',     // y 
+            'test_guid_4y',     // size
+            'test_guid_5y',     // color
+            'test_guid_5y'));   // symbol        
+    });
+</script>
+<style>
+div.ggGraph_line {
+    height: 300px;
+    border: 1px solid black;
+}
+
+</style>
+</header>
+<body>
+
+<!-- Line graph 1 -->
+<h1>Line plot</h1>
+Graphs with lines.
+<div id='lineGraph1' class='ggGraph_line'></div>
+<label id='lineGraph1_label'></label>
+
+<!-- Zoom box plot -->
+<h1>Zoom box plot</h1>
+<div id='lineGraph2' class='ggGraph_line'></div>
+This demonstrates a graph with lines, with a zoom in/out summary on, configured to x-axis zooming only.
+<ul>
+<li>You can zoom w/ left click drag in either the summary or regular graph portions (or touch).</li>
+<li>To pan, use the shift key (or use 2 fingers to drag).</li>
+<li>Buttons that appear allow you to step in and out the zoom/pan choices or return to the fully zoomed out state.</li>
+<li>Also shows how you can mark off a chart for company confidentiality (security) purposes relatively easily.</li>
+<li>Legend was turned off (it's optional).
+</ul>
+
+
+<h1>Marker plot</h1>
+<div id='markerGraph1' class='ggGraph_line'></div>
+Graphs with markers instead of lines are supported. 
+<ul>
+<li>A variety of markers are allowed: circle, square, diamond, triangle, triangle2, plus, cross.</li>
+<li>Lines can be dashed: solid, dash, dot, dash dot, dash dash dot, dash dot dot, dash dash dot dot</li>
+</ul>
+
+<h1>Streaming data</h1>
+<div id='streamGraph1' class='ggGraph_line'></div>
+Streaming is <button id='onoff_stream_button'>off</button><br>
+Graphs can be animated by pushing data to the data model that backs the graph, 
+and even letting the data model cause the update through the graph's event model.
+
+<h1>Bubble value plot</h1>
+<div id='bubbleGraph1' class='ggGraph_line'></div>
+Markers whose size varies by value.
+
+
+<h1>Size, color and even symbol by data value plot</h1>
+<div id='bubbleColorSymbol' class='ggGraph_line'></div>
+Marker colors vary by value.
+
+<h1>Polar</h1>
+<div id='polarGraph' class='ggGraph_line'></div>
+Polar graphs have an angle for the 'x' axis, and a value for the 'y' axis.
+<ul>
+<li>A polar graph is defined by setting graphOptions.main.graphType is set to "2DPolar"</li>
+<li>Polar graphs don't offer zoom (yet)?</li>
+<li>Axis labeling is controlled by graphOptions.xAxisOptions.polarAngle:
+    <ul>
+        <li>nsew = N, NE, E, SE, S, SW, W, NW</li>
+        <li>rad = Radians 0 - 2PI</li>
+        <li>deg = Degrees 0-360</li>
+        <li>mills = Military style, 0-3600</li>
+        <li>srad = Radians -PI to PI</li>
+        <li>sdeg = Degrees -180 to 180</li>
+        <li>smills = Military style, -1800 to 1800</li>
+    </ul>
+</li>
+<li>Per-series behavior defines how range and values are treated
+    <ul>
+        <li>seriesOptions.polarAngle - defines x-values of that series are 'rad'=radians, 'mills'=mills, 'deg'=degrees</li> 
+        <li>seriesOptions.polarRange - 1=unity -y values are rotated 180, 0 means most negative is center.</li>
+    <ul>
+</li>
+</ul>
+
+
+<h1>Spectrum (fft) w/ summary plot</h1>
+<h1>Spectrum (fft) w/ summary plot, streaming</h1>
+<h1>Waterfall spectrum (fft) w/ summary plot</h1>
+<h1>3D polar</h1>
+<h1>3D surface </h1>
+
+
+</body>
+</html>
