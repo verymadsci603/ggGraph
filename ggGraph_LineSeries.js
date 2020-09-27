@@ -497,6 +497,51 @@ class LineSeries {
         }      
     }
     
+    /**
+     * @brief 	Draw extended, for per-color, per-size and or per-label series.
+     * 
+     * @param 	ctx		Canvas context.
+     * @param 	xData	X series data values array.
+     * @param 	yData	Y series data values array.
+     * @param   mData   Marker kind data.
+     * @param   sData   Symbol size data.
+     * @param   cData   Color data.
+     * @param   lData   Label data.
+     * @param 	xg 		X gain.
+     * @param   xo		X offset.
+     * @param 	yg 		Y gain.
+     * @param   yo		Y offset.
+     * @param 	sg 		X gain.
+     * @param   so		X offset.
+     * @param 	cg 		Y gain.
+     * @param   co		Y offset.
+     * @param   xso     X screen center.
+     * @param   yso     Y screen center.
+     */    
+    _draw2DPolarSegment_MarkerEx(ctx, xData, yData, sData, mData, cData, lData, 
+        xg, xo, yg, yo, sg, so, cg, co, xso, yso) {
+        
+        let len = xData.length < yData.length ? xData.length : yData.length;
+        let defShape = this.seriesOptions.defaultMarkerShape;
+        let defSize  = this.seriesOptions.defaultMarkerSize;
+        let defColor = this.seriesOptions.defaultMarkerColor;
+    
+        
+        // Too hard to not do this per-point.
+        // 
+        // These graphs are complex, so typically not many (<10k) points,
+        // we can always make this faster later.
+        for (let ii = 0; ii < len; ii++) {
+            let a = (xData[0] * xg) + xo;
+            let r = (yData[0] * yg) + yo; 
+            let xp = r * Math.sin(a) + xso;
+            let yp = r * Math.cos(a) + yso;            
+            let shape = mData !== undefined ? mData[ii] : defShape;
+            let size  = sData !== undefined ? (sData[ii] * sg) + so : defSize;
+            let color = cData !== undefined ? valueToColor((cData[ii] * cg) + co) : defColor;
+            this._drawOneMarker(ctx, shape, size, color, xp, yp);
+        }      
+    }
     
     /** 
      * @brief   Draw a marker of a given shape, size and color centered at xp,yp.
@@ -1073,11 +1118,32 @@ class LineSeries {
             ctx.stroke();
             ctx.setLineDash([]);
         }
+        
+        // Markers, if any.
+        for (let ii = 0; ii < cacheLen; ii++) {
+            if (x.mins[ii] > dataBounds.xBounds.max || x.maxs[ii] < dataBounds.xBounds.min ||
+                y.mins[ii] > dataBounds.yBounds.max || y.maxs[ii] < dataBounds.yBounds.min) {
+                continue;
+            }
+            
+            // Not super accelerated.
+            this._draw2DPolarSegment_MarkerEx(ctx, 
+                x.cache[ii], y.cache[ii], 
+                vData === undefined ? undefined : vData.cache[ii], // Size like
+                sData === undefined ? undefined : sData.cache[ii], // Shape like
+                cData === undefined ? undefined : cData.cache[ii], // Color like
+                lData === undefined ? undefined : lData.cache[ii], // Label like                
+                xg, xo, yg, yo, vg, vo, cg, co, xso, yso);            
+        }
     }    
 }
 
+/** 
+ * Mild simplification of LineSeries.
+ */
 class Line2DSeries extends LineSeries {
     constructor(seriesOptions, xGuid, yGuid, valuesGuid = '', colorsGuid = '', symbolsGuid = '', labelsGuid = '') {
         super(seriesOptions, xGuid, yGuid, '', valuesGuid, colorsGuid, symbolsGuid, labelsGuid);
     }
 }
+

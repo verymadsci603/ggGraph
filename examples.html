@@ -253,7 +253,34 @@
             'test_guid_3y',     // y 
             'test_guid_4y',     // size
             'test_guid_5y',     // color
-            'test_guid_5y'));   // symbol        
+            'test_guid_5y'));   // symbol  
+
+        <!-- Heatmap. -->    
+        let g8 = new Graph('heatmap', {
+            main : {
+                graphType: '2D',
+                backgroundColor: '#FFFFFF',
+                boxEdgeColor: '#000000',
+                boxEdgeSize: 2,
+                textColor: '#000000',
+                textSizePx: 11,
+                marginPx: 4,
+                zoom: {kindsAllowed: 'xy', currentMode: 'xy', fillColor: '#A0A08080', strokeColor: '#000080'},
+                xSummary: {behavior: 'never', sizePercent: 25, minSizePx: 100, maxSizePx: 400, markerColor: '#808080', alignment: 'left'} 
+            },
+            title: {show: true, textStr: 'Polar', backgroundColor: '#808080', textColor: '#FFFFFF', textSizePx: 12, loc: 'top'},
+            legend: undefined,        
+            xAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10},
+            yAxis: {
+                show: true, textStr: '', isLog: false, backgroundColor: '#FFFFFF', markerColor: '#000000',
+                graphlineColor: '#808080', graphLineDash: 'dot', markerSizePx: 4, textColor: '#808080', textSizePx: 10}
+            });
+        g8.addSeries(new HeatmapSeries({name: 'low', opacity: 0.5, period: 1000, minColor: 0, maxColor: 0.5},            
+            'test_guid_1y'));
+        g8.addSeries(new HeatmapSeries({name: 'high', opacity: 0.5, period: 1000, minColor: 0.5, maxColor: 1},            
+            'test_guid_2y'));
     });
 </script>
 <style>
@@ -334,6 +361,8 @@ Polar graphs have an angle for the 'x' axis, and a value for the 'y' axis.
 </ul>
 
 <h1>Heatmap</h1>
+<div id='heatmap' class='ggGraph_line'></div>
+
 <h1>Spectrum (fft) w/ summary plot</h1>
 <h1>Spectrum (fft) w/ summary plot, streaming</h1>
 <h1>Waterfall spectrum (fft) w/ summary plot</h1>
