@@ -114,7 +114,7 @@ class DataHive {
         ud = unboundGuids.reduce((accum, guid) => { return accum.append(get_dataSeries[guid]);});
         segments = [];
         
-        // Do by tree hierarchicallyt later.
+        // Do by tree hierarchically later.
         let max_bd = bd.reduce((min, el, ii) => { return ii == 0 ? el.length : min < el.length ? min : el.length; });
         let max_ud = bd.reduce((min, el, ii) => { return ii == 0 ? el.length : min < el.length ? min : el.length; });
     }
